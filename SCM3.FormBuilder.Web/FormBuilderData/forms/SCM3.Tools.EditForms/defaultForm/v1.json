@@ -1,0 +1,42 @@
+{
+  "FormVersionId": "794be2d2-5e48-4852-85e2-28bc1f0330f6",
+  "FormId": "30ea0616-a2fc-4748-8acc-bfd2763c77ad",
+  "ToolType": "SCM3.Tools.EditForms",
+  "FormKey": "defaultForm",
+  "VersionNumber": 1,
+  "IsPublished": true,
+  "PublishedDate": "2026-06-27T02:53:07.3224016Z",
+  "Sections": [
+    {
+      "SectionId": "29e17c84-9a3a-4f4f-8621-eceaee526c73",
+      "Title": "General",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "834c27f1-8684-47c0-a70d-a2114bedbc67",
+          "Type": "Text",
+          "Label": "Name",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 5,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "2e575bdf-c381-429f-9624-c68f5a950f69",
+          "Type": "Dropdown",
+          "Label": "New Dropdown field",
+          "GridRow": 1,
+          "GridColumn": 6,
+          "GridSpan": 12,
+          "Options": [],
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}

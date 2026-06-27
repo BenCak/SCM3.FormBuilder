@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>    <PackageReference Include="Telerik.UI.for.Blazor" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>    <ProjectReference Include="..\SCM3.FormBuilder.Core\SCM3.FormBuilder.Core.csproj" />
+    <ProjectReference Include="..\SCM3.FormBuilder.Data\SCM3.FormBuilder.Data.csproj" />
+    <ProjectReference Include="..\SCM3.FormBuilder.UI\SCM3.FormBuilder.UI.csproj" />
+  </ItemGroup>
+
+</Project>

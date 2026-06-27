@@ -1,0 +1,234 @@
+@namespace SCM3.FormBuilder.UI.Renderer
+@using SCM3.FormBuilder.Core.Models
+@using SCM3.FormBuilder.Core.Evaluation
+@using SCM3.FormBuilder.Data
+@using SCM3.FormBuilder.UI.Shared
+
+@if (_loading)
+{
+    <p class="fb-loading">Loading form...</p>
+}
+else if (_version is null)
+{
+    <p class="fb-error">No published form found for @ToolType / @FormKey.</p>
+}
+else
+{
+    <div class="fb-form">
+        <div class="fb-artifact-selector">
+            <label>Artifact ID:</label>
+            <span style="padding:8px 12px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;display:inline-block;min-width:200px;font-family:monospace">@(_artifactId ?? "(Not set)")</span>
+        </div>
+
+        @foreach (var sectionItem in _version.Sections.OrderBy(s => s.Order))
+        {
+            <div class="fb-section">
+                <h3 class="fb-section-title">@sectionItem.Title</h3>
+                <div class="fb-grid">
+                    @foreach (var field in sectionItem.Fields)
+                    {
+                        var state = _renderStates.TryGetValue(field.FieldId, out var s)
+                            ? s
+                            : new FieldRenderState(true, true, false);
+
+                        <FieldRendererControl Field="field"
+                                              RenderState="state"
+                                              Values="_values"
+                                              OnFieldValueChanged="HandleFieldValueChanged" />
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="fb-actions">
+            <button class="fb-btn" @onclick="HandleCancel">Cancel</button>
+            <button class="fb-btn fb-btn-primary" @onclick="HandleSave" disabled="@(_saving || string.IsNullOrWhiteSpace(_artifactId))">Save</button>
+        </div>
+
+        @if (_validationErrors.Count > 0)
+        {
+            <div class="fb-validation-summary">
+                @foreach (var err in _validationErrors)
+                {
+                    <p class="fb-error">@err</p>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    // Required: which form, for which tool
+    [Parameter, EditorRequired] public string ToolType { get; set; } = "";
+    [Parameter, EditorRequired] public string FormKey { get; set; } = "";
+    [Parameter] public string RecordPrimaryKey { get; set; } = ""; // Deprecated - kept for compatibility
+
+    // Fired after a successful save, with the raw values the host can do
+    // its own cross-cutting validation against if it needs to.
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    [Inject] private IFormRepository Repository { get; set; } = null!;
+
+    private FormVersion? _version;
+    private List<FormSubmission> _existingSubmissions = new();
+    private Dictionary<string, object?> _values = new(); // temporary storage for actual values during editing
+    private Dictionary<string, FieldRenderState> _renderStates = new();
+    private readonly ConditionalRuleEvaluator _evaluator = new();
+    private readonly List<string> _validationErrors = new();
+    private string _artifactId = "";
+    private bool _loading = true;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _artifactId = RecordPrimaryKey ?? "";
+        await LoadForm();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // When RecordPrimaryKey parameter changes, update _artifactId and reload form if needed
+        if (RecordPrimaryKey != _artifactId)
+        {
+            _artifactId = RecordPrimaryKey ?? "";
+            // Only reload if form key changed
+            if (_version != null)
+            {
+                StateHasChanged();
+            }
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task LoadForm()
+    {
+        _loading = true;
+        // _artifactId is already set from OnInitializedAsync/OnParametersSetAsync
+        _version = await Repository.GetVersion(ToolType, FormKey); // Get latest published version
+        _loading = false;
+    }
+
+    private void RecomputeRenderStates()
+    {
+        if (_version is null) return;
+        _renderStates = _evaluator.Evaluate(_version, _values);
+    }
+
+    private void HandleFieldValueChanged((string FieldId, object? Value) change)
+    {
+        _values[change.FieldId] = change.Value;
+        RecomputeRenderStates(); // live re-evaluation, per the conditional rule loop
+        StateHasChanged();
+    }
+
+    private async Task HandleSave()
+    {
+        _validationErrors.Clear();
+
+        if (_version is null || string.IsNullOrWhiteSpace(_artifactId)) return;
+
+        // Layer 1 validation: the schema's own declared rules. A field that
+        // is currently hidden is skipped - you cannot be required to fill
+        // in something you were never shown.
+        foreach (var section in _version.Sections)
+        {
+            foreach (var field in section.Fields)
+            {
+                var state = _renderStates.GetValueOrDefault(field.FieldId);
+                if (state is null || !state.Visible) continue;
+
+                var rule = field.Validation;
+                if (rule is null) continue;
+
+                var value = _values.GetValueOrDefault(field.FieldId)?.ToString();
+
+                if (rule.Required && string.IsNullOrWhiteSpace(value))
+                {
+                    _validationErrors.Add($"{field.Label} is required.");
+                }
+                if (rule.MaxLength.HasValue && value?.Length > rule.MaxLength)
+                {
+                    _validationErrors.Add($"{field.Label} exceeds maximum length.");
+                }
+            }
+        }
+
+        if (_validationErrors.Count > 0) return;
+
+        _saving = true;
+
+        // Create submission with labels and values
+        var submissionValues = new Dictionary<string, SubmissionFieldData>();
+        foreach (var section in _version.Sections)
+        {
+            foreach (var field in section.Fields)
+            {
+                if (_values.TryGetValue(field.FieldId, out var value))
+                {
+                    submissionValues[field.FieldId] = new SubmissionFieldData
+                    {
+                        Label = field.Label,
+                        Value = value
+                    };
+                }
+            }
+        }
+
+        var submission = new FormSubmission
+        {
+            SubmissionId = Guid.NewGuid(),
+            FormVersionId = _version.FormVersionId,
+            FormVersionNumber = _version.VersionNumber,
+            ToolType = ToolType,
+            FormKey = FormKey,
+            RecordPrimaryKey = _artifactId, // Use artifact ID as the record key
+            Values = submissionValues,
+            SubmittedDate = DateTime.UtcNow,
+            SubmittedBy = "" // host app should supply the actual current user
+        };
+
+        await Repository.SaveSubmission(submission);
+        _saving = false;
+
+        // Clear for next submission
+        _values.Clear();
+        _artifactId = "";
+        StateHasChanged();
+
+        // Return just the values for the callback
+        var valueDict = submissionValues.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Value);
+        await OnSaved.InvokeAsync(valueDict);
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancelled.InvokeAsync();
+    }
+}
+
+<style>
+.fb-artifact-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.fb-artifact-selector label {
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.fb-artifact-selector input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+</style>

@@ -1,0 +1,447 @@
+@namespace SCM3.FormBuilder.UI.Designer
+@using SCM3.FormBuilder.Core.Models
+@using SCM3.FormBuilder.Data
+@using Microsoft.AspNetCore.Components.Web
+
+@if (_version is null)
+{
+    <p class="fb-loading">Loading form...</p>
+}
+else
+{
+<div class="fb-designer">
+    <div class="fb-palette">
+        <p class="fb-palette-title">Fields</p>
+        @foreach (var type in Enum.GetValues<FieldType>())
+        {
+            <div class="fb-palette-item" 
+                 draggable="true"
+                 @ondragstart="e => OnPaletteDragStart(type, e)"
+                 @onclick="() => AddFieldToActiveSection(type)">
+                @type
+            </div>
+        }
+        <p class="fb-hint">Click to add, or drag to canvas.</p>
+    </div>
+
+    <div class="fb-canvas">
+        <div class="fb-canvas-header">
+            <div>
+                <p class="fb-form-title">@(_version.IsPublished ? "Published" : "Draft") &middot; @ToolType / @FormKey</p>
+                <div class="fb-form-subtitle">
+                    <label>Version:</label>
+                    <p>DEBUG: Versions = @(_availableVersions?.Count ?? 0)</p>
+                    <select @onchange="OnVersionChange" style="padding:4px 8px;border-radius:3px;border:1px solid #ccc">
+                        @if (_availableVersions != null && _availableVersions.Count > 0)
+                        {
+                            @foreach (var (versionNum, isPublished) in _availableVersions.OrderByDescending(v => v.VersionNumber))
+                            {
+                                <option value="@versionNum" selected="@(versionNum == _version.VersionNumber)">
+                                    v@versionNum@(isPublished ? " (published)" : " (draft)")
+                                </option>
+                            }
+                        }
+                        else
+                        {
+                            <option>No versions found</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="fb-canvas-actions">
+                <button class="fb-btn" @onclick="SaveDraft">Save draft</button>
+                <button class="fb-btn fb-btn-primary" @onclick="Publish" disabled="@_version.IsPublished">Publish</button>
+            </div>
+        </div>
+
+        @foreach (var sec in _version.Sections.OrderBy(s => s.Order))
+        {
+            var sectionId = sec.SectionId;
+            var sectionObj = sec;
+            var isActive = sec == _activeSection;
+            var isDragOver = _dragOverSectionId == sec.SectionId;
+            <div class="fb-section-editor @(isActive ? "fb-section-active" : "") @(isDragOver ? "fb-section-dragover" : "")"
+                 @onclick="() => _activeSection = sec"
+                 @ondragover="e => OnSectionDragOver(sectionId, e)"
+                 @ondragleave="() => OnSectionDragLeave()"
+                 @ondrop="e => OnSectionDrop(sectionObj, e)">
+                <p class="fb-section-label">Section: @sec.Title @(isActive ? "(selected - new fields go here)" : "")</p>
+
+                @foreach (var field in sec.Fields.OrderBy(f => f.GridRow).ThenBy(f => f.GridColumn))
+                {
+                    <div class="fb-field-card @(field == _selectedField ? "fb-field-card-selected" : "")"
+                         @onclick="() => SelectField(field)" @onclick:stopPropagation="true">
+                        <div class="fb-field-card-row">
+                            <span class="fb-field-card-label">@field.Label</span>
+                            @if (field.ConditionalRules?.Count > 0)
+                            {
+                                <span class="fb-field-badge" title="Has conditional rules">@field.ConditionalRules.Count rule(s)</span>
+                            }
+                        </div>
+                        <p class="fb-field-card-meta">
+                            @field.Type
+                            @(field.Validation?.Required == true ? " · required" : "")
+                            · span @field.GridSpan/12
+                        </p>
+                    </div>
+                }
+            </div>
+        }
+
+        <button class="fb-btn fb-btn-block" @onclick="AddSection">Add section</button>
+    </div>
+
+    <div class="fb-properties">
+        <p class="fb-palette-title">Field properties</p>
+        @if (_selectedField is null)
+        {
+            <p class="fb-hint">Select a field to edit its properties.</p>
+        }
+        else
+        {
+            <label class="fb-prop-label">Label</label>
+            <input class="fb-input" value="@_selectedField.Label"
+                   @onchange="e => SetLabel(e)" />
+
+            <label class="fb-prop-label">Grid column (1-12)</label>
+            <input class="fb-input" type="number" min="1" max="12" value="@_selectedField.GridColumn"
+                   @onchange="e => SetGridColumn(e)" />
+
+            <label class="fb-prop-label">Grid span</label>
+            <input class="fb-input" type="number" min="1" max="12" value="@_selectedField.GridSpan"
+                   @onchange="e => SetGridSpan(e)" />
+
+            <label class="fb-prop-label">Grid row</label>
+            <input class="fb-input" type="number" min="1" value="@_selectedField.GridRow"
+                   @onchange="e => SetGridRow(e)" />
+
+            @if (_selectedField.Type is FieldType.Dropdown or FieldType.ComboBox or FieldType.MultiSelect)
+            {
+                <label class="fb-prop-label">Options (comma separated)</label>
+                <input class="fb-input"
+                       value="@string.Join(",", _selectedField.Options?.Select(o => o.Label) ?? Enumerable.Empty<string>())"
+                       @onchange="e => UpdateSelectedOptions(e.Value?.ToString())" />
+            }
+
+            @if (_selectedField.Type == FieldType.ComboBox)
+            {
+                <label class="fb-prop-checkbox">
+                    <input type="checkbox" checked="@_selectedField.AllowCustomValue"
+                           @onchange="e => UpdateSelected(f => f.AllowCustomValue = (bool)(e.Value ?? false))" />
+                    Allow custom value
+                </label>
+            }
+
+            <label class="fb-prop-checkbox">
+                <input type="checkbox" checked="@(_selectedField.Validation?.Required ?? false)"
+                       @onchange="e => UpdateSelected(f => { f.Validation ??= new ValidationRule(); f.Validation.Required = (bool)(e.Value ?? false); })" />
+                Required
+            </label>
+
+            @if (_selectedField.Type is FieldType.Text or FieldType.ComboBox or FieldType.TextArea)
+            {
+                <label class="fb-prop-label">Max length</label>
+                <input class="fb-input" type="number" min="1" value="@(_selectedField.Validation?.MaxLength)"
+                       @onchange="e => UpdateSelected(f => { f.Validation ??= new ValidationRule(); f.Validation.MaxLength = int.TryParse(e.Value?.ToString(), out var val) ? val : null; })" />
+            }
+
+            <div class="fb-prop-divider">
+                <p class="fb-prop-label">Conditional rules</p>
+                @if (_selectedField.ConditionalRules is { Count: > 0 })
+                {
+                    @foreach (var rule in _selectedField.ConditionalRules)
+                    {
+                        <div class="fb-rule-chip">
+                            @($"{rule.Effect} when {rule.SourceFieldId} {rule.Operator} \"{rule.Value}\"")
+                            <button class="fb-rule-remove" @onclick="() => RemoveRule(rule)"></button>
+                        </div>
+                    }
+                }
+                <button class="fb-btn fb-btn-block" @onclick="() => _showRuleBuilder = true">Add conditional rule</button>
+            </div>
+
+            <button class="fb-btn fb-btn-danger fb-btn-block" @onclick="RemoveSelectedField">Delete field</button>
+        }
+    </div>
+</div>
+}
+
+@if (_showRuleBuilder && _selectedField is not null)
+{
+    <div class="fb-modal-backdrop">
+        <div class="fb-modal">
+            <p class="fb-form-title">Add conditional rule for @_selectedField.Label</p>
+
+            <label class="fb-prop-label">When field</label>
+            <select class="fb-input" @bind="_ruleSourceFieldId">
+                @foreach (var f in AllFieldsExcept(_selectedField))
+                {
+                    <option value="@f.FieldId">@f.Label</option>
+                }
+            </select>
+
+            <label class="fb-prop-label">Operator</label>
+            <select class="fb-input" @bind="_ruleOperator">
+                <option value="equals">equals</option>
+                <option value="notEquals">does not equal</option>
+                <option value="contains">contains</option>
+            </select>
+
+            <label class="fb-prop-label">Value</label>
+            <input class="fb-input" @bind="_ruleValue" />
+
+            <label class="fb-prop-label">Effect on @_selectedField.Label</label>
+            <select class="fb-input" value="@_ruleEffect" @onchange="e => _ruleEffect = Enum.Parse<ConditionalEffect>(e.Value?.ToString() ?? nameof(ConditionalEffect.Show))">
+                @foreach (var effect in Enum.GetValues<ConditionalEffect>())
+                {
+                    <option value="@effect">@effect</option>
+                }
+            </select>
+
+            <div class="fb-canvas-actions">
+                <button class="fb-btn" @onclick="() => _showRuleBuilder = false">Cancel</button>
+                <button class="fb-btn fb-btn-primary" @onclick="SaveRule">Add rule</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string ToolType { get; set; } = "";
+    [Parameter, EditorRequired] public string FormKey { get; set; } = "";
+    [Parameter] public EventCallback<FormVersion> OnPublished { get; set; }
+
+    [Inject] private IFormRepository Repository { get; set; } = null!;
+
+    private FormVersion _version = null!;
+    private Field? _selectedField;
+    private Section? _activeSection;
+    private bool _showRuleBuilder;
+    private string _ruleSourceFieldId = "";
+    private string _ruleOperator = "equals";
+    private string _ruleValue = "";
+    private ConditionalEffect _ruleEffect = ConditionalEffect.Show;
+    
+    // Version selection
+    private List<(int VersionNumber, bool IsPublished)>? _availableVersions;
+    
+    // Drag and drop state
+    private FieldType? _draggedFieldType;
+    private string _dragOverSectionId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load all available versions
+        _availableVersions = await Repository.ListVersions(ToolType, FormKey);
+
+        var existing = await Repository.GetVersion(ToolType, FormKey);
+
+        if (existing is not null && !existing.IsPublished)
+        {
+            // Resume editing the existing draft.
+            _version = existing;
+        }
+        else
+        {
+            // Either nothing exists yet, or the latest is published -
+            // either way, start a fresh draft version.
+            var nextNumber = (existing?.VersionNumber ?? 0) + 1;
+            _version = new FormVersion
+            {
+                FormVersionId = Guid.NewGuid(),
+                FormId = Guid.NewGuid(),
+                ToolType = ToolType,
+                FormKey = FormKey,
+                VersionNumber = nextNumber,
+                IsPublished = false,
+                Sections = new List<Section>
+                {
+                    new Section { SectionId = Guid.NewGuid().ToString(), Title = "General", Order = 1 }
+                }
+            };
+        }
+
+        _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
+    }
+
+    private async Task OnVersionChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int versionNumber))
+        {
+            var selectedVersion = await Repository.GetVersion(ToolType, FormKey, versionNumber);
+            if (selectedVersion != null)
+            {
+                _version = selectedVersion;
+                _selectedField = null;
+                _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
+            }
+        }
+    }
+
+    private void SelectField(Field field) => _selectedField = field;
+
+    private void AddSection()
+    {
+        var newSection = new Section
+        {
+            SectionId = Guid.NewGuid().ToString(),
+            Title = $"Section {_version.Sections.Count + 1}",
+            Order = _version.Sections.Count + 1
+        };
+        _version.Sections.Add(newSection);
+        _activeSection = newSection;
+    }
+
+    private void AddFieldToActiveSection(FieldType type)
+    {
+        if (_activeSection is null)
+        {
+            // No section exists yet - create one so the click isn't a dead end.
+            AddSection();
+        }
+
+        var section = _activeSection!;
+        var nextRow = section.Fields.Count == 0 ? 1 : section.Fields.Max(f => f.GridRow) + 1;
+
+        var field = new Field
+        {
+            FieldId = Guid.NewGuid().ToString(),
+            Type = type,
+            Label = $"New {type} field",
+            GridRow = nextRow,
+            GridColumn = 1,
+            GridSpan = 12,
+            Options = type is FieldType.Dropdown or FieldType.ComboBox or FieldType.MultiSelect
+                ? new List<FieldOption>()
+                : null
+        };
+
+        section.Fields.Add(field);
+        _selectedField = field;
+    }
+
+    // Drag and drop handlers
+    private void OnPaletteDragStart(FieldType fieldType, DragEventArgs e)
+    {
+        _draggedFieldType = fieldType;
+        if (e.DataTransfer != null)
+        {
+            e.DataTransfer.EffectAllowed = "copy";
+        }
+    }
+
+    private void OnSectionDragOver(string sectionId, DragEventArgs e)
+    {
+        _dragOverSectionId = sectionId;
+        if (e.DataTransfer != null)
+        {
+            e.DataTransfer.DropEffect = "copy";
+        }
+    }
+
+    private void OnSectionDragLeave()
+    {
+        _dragOverSectionId = "";
+    }
+
+    private void OnSectionDrop(Section section, DragEventArgs e)
+    {
+        _dragOverSectionId = "";
+
+        if (_draggedFieldType.HasValue)
+        {
+            _activeSection = section;
+            AddFieldToActiveSection(_draggedFieldType.Value);
+            _draggedFieldType = null;
+        }
+    }
+
+    private void UpdateSelected(Action<Field> mutate)
+    {
+        if (_selectedField is null) return;
+        mutate(_selectedField);
+    }
+
+    private void SetLabel(ChangeEventArgs e)
+    {
+        if (_selectedField is null) return;
+        _selectedField.Label = e.Value?.ToString() ?? "";
+    }
+
+    private void SetGridColumn(ChangeEventArgs e)
+    {
+        if (_selectedField is null) return;
+        _selectedField.GridColumn = ParseIntOr(e.Value, 1);
+    }
+
+    private void SetGridSpan(ChangeEventArgs e)
+    {
+        if (_selectedField is null) return;
+        _selectedField.GridSpan = ParseIntOr(e.Value, 12);
+    }
+
+    private void SetGridRow(ChangeEventArgs e)
+    {
+        if (_selectedField is null) return;
+        _selectedField.GridRow = ParseIntOr(e.Value, 1);
+    }
+
+    private void UpdateSelectedOptions(string? csv)
+    {
+        if (_selectedField is null) return;
+        var labels = (csv ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        _selectedField.Options = labels
+            .Select(l => new FieldOption { Label = l, Value = l.ToLowerInvariant().Replace(" ", "-") })
+            .ToList();
+    }
+
+    private void RemoveSelectedField()
+    {
+        if (_selectedField is null) return;
+        foreach (var section in _version.Sections)
+        {
+            section.Fields.Remove(_selectedField);
+        }
+        _selectedField = null;
+    }
+
+    private IEnumerable<Field> AllFieldsExcept(Field exclude) =>
+        _version.Sections.SelectMany(s => s.Fields).Where(f => f.FieldId != exclude.FieldId);
+
+    private void SaveRule()
+    {
+        if (_selectedField is null || string.IsNullOrWhiteSpace(_ruleSourceFieldId)) return;
+
+        _selectedField.ConditionalRules ??= new List<ConditionalRule>();
+        _selectedField.ConditionalRules.Add(new ConditionalRule
+        {
+            SourceFieldId = _ruleSourceFieldId,
+            Operator = _ruleOperator,
+            Value = _ruleValue,
+            Effect = _ruleEffect
+        });
+
+        _showRuleBuilder = false;
+    }
+
+    private void RemoveRule(ConditionalRule rule)
+    {
+        _selectedField?.ConditionalRules?.Remove(rule);
+    }
+
+    private static int ParseIntOr(object? value, int fallback) =>
+        int.TryParse(value?.ToString(), out var n) ? n : fallback;
+
+    private async Task SaveDraft()
+    {
+        await Repository.SaveVersion(_version);
+    }
+
+    private async Task Publish()
+    {
+        _version.IsPublished = true;
+        _version.PublishedDate = DateTime.UtcNow;
+        await Repository.SaveVersion(_version);
+        await OnPublished.InvokeAsync(_version);
+    }
+}

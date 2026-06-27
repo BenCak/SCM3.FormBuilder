@@ -1,0 +1,66 @@
+{
+  "FormVersionId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+  "FormId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+  "ToolType": "ArtifactForms",
+  "FormKey": "System-Form",
+  "VersionNumber": 1,
+  "IsPublished": true,
+  "PublishedDate": "2026-06-27T00:00:00Z",
+  "Sections": [
+    {
+      "SectionId": "cccccccc-cccc-cccc-cccc-ccccccccccccd",
+      "Title": "System Details",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "cccccccc-dddd-dddd-dddd-cccccccccccc",
+          "Type": "Text",
+          "Label": "System Name",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "cccccccc-dddd-dddd-dddd-ccccccccccccd",
+          "Type": "Text",
+          "Label": "System Version",
+          "GridRow": 2,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "cccccccc-dddd-dddd-dddd-ccccccccccce",
+          "Type": "TextArea",
+          "Label": "Components",
+          "GridRow": 3,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "cccccccc-dddd-dddd-dddd-cccccccccccf",
+          "Type": "TextArea",
+          "Label": "Configuration",
+          "GridRow": 4,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "FormVersionId": "61f06e00-1f4f-44a0-a32e-95ad037c722a",
+  "FormId": "1b8b653e-a387-47c8-8875-39498f92532e",
+  "ToolType": "ArtifactForms",
+  "FormKey": "System-Form",
+  "VersionNumber": 2,
+  "IsPublished": true,
+  "PublishedDate": "2026-06-27T06:36:01.4621524Z",
+  "Sections": [
+    {
+      "SectionId": "473dfa31-4514-4cf4-ac96-f8f1dafad4e9",
+      "Title": "General",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "32d5012a-9d52-4d40-8379-f0e374fbe7d5",
+          "Type": "Text",
+          "Label": "custom field 1",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}

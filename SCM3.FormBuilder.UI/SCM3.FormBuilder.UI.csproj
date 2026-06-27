@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SCM3.FormBuilder.Core\SCM3.FormBuilder.Core.csproj" />
+    <ProjectReference Include="..\SCM3.FormBuilder.Data\SCM3.FormBuilder.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Telerik.UI.for.Blazor" Version="6.1.0" />
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+</Project>

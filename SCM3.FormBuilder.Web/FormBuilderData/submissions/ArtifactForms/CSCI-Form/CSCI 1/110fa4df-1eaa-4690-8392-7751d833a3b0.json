@@ -1,0 +1,28 @@
+{
+  "SubmissionId": "110fa4df-1eaa-4690-8392-7751d833a3b0",
+  "FormVersionId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "FormVersionNumber": 1,
+  "ToolType": "ArtifactForms",
+  "FormKey": "CSCI-Form",
+  "RecordPrimaryKey": "CSCI 1",
+  "Values": {
+    "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa": {
+      "Label": "CSCI Name",
+      "Value": "test"
+    },
+    "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaab": {
+      "Label": "Version",
+      "Value": "123 321"
+    },
+    "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaac": {
+      "Label": "Location",
+      "Value": "bbbb"
+    },
+    "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaad": {
+      "Label": "Engine Config",
+      "Value": "2-engine"
+    }
+  },
+  "SubmittedDate": "2026-06-27T06:32:53.7944433Z",
+  "SubmittedBy": ""
+}

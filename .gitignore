@@ -1,0 +1,27 @@
+# Build results
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# IDE
+.vs/
+.vscode/
+*.sln.iml
+.idea/
+
+# Dependencies
+.nuget/packages/
+
+# Environment
+.env
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+tmp/
+temp/

@@ -1,0 +1,228 @@
+@namespace SCM3.FormBuilder.UI.Viewer
+@using SCM3.FormBuilder.Core.Models
+@using SCM3.FormBuilder.Data
+@using System.Text.Json
+
+@inject IFormRepository Repository
+
+<div class="submissions-viewer">
+    <div class="submissions-header">
+        <h3>Submissions for @FormKey</h3>
+        <div class="submissions-controls">
+            <label>Search by label:</label>
+            <input type="text" placeholder="Label name..." @bind="_searchLabel" />
+            <input type="text" placeholder="Value..." @bind="_searchValue" />
+            <button class="fb-btn" @onclick="RefreshSubmissions">Search</button>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Loading submissions...</p>
+    }
+    else if (_submissions == null || _submissions.Count == 0)
+    {
+        <p>No submissions found.</p>
+    }
+    else
+    {
+        <div class="submissions-list">
+            @foreach (var submission in _submissions)
+            {
+                <div class="submission-card">
+                    <div class="submission-header">
+                        <strong>Record: @(string.IsNullOrEmpty(submission.RecordPrimaryKey) ? "(new)" : submission.RecordPrimaryKey)</strong>
+                        <span class="submission-date">@submission.SubmittedDate:G</span>
+                    </div>
+                    <div class="submission-data">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Label</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var kvp in submission.Values)
+                                {
+                                    <tr>
+                                        <td>@kvp.Value.Label</td>
+                                        <td>
+                                            @if (kvp.Value.Value is bool b)
+                                            {
+                                                <span>@(b ? "✓" : "✗")</span>
+                                            }
+                                            else if (kvp.Value.Value is string s && s.Contains("\n"))
+                                            {
+                                                <pre>@s</pre>
+                                            }
+                                            else
+                                            {
+                                                <span>@kvp.Value.Value</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="submission-meta">
+                        <small>Version: @submission.FormVersionNumber | Submitted by: @submission.SubmittedBy</small>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string ToolType { get; set; } = "";
+    [Parameter] public string FormKey { get; set; } = "";
+
+    private List<FormSubmission>? _submissions;
+    private string _searchLabel = "";
+    private string _searchValue = "";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshSubmissions();
+    }
+
+    private async Task RefreshSubmissions()
+    {
+        _loading = true;
+        _submissions = new List<FormSubmission>();
+
+        if (string.IsNullOrEmpty(_searchLabel))
+        {
+            // Load all submissions from disk when no search is active
+            _submissions = await LoadAllSubmissions();
+        }
+        else if (!string.IsNullOrEmpty(_searchValue))
+        {
+            // Use the query method to search by label + value
+            _submissions = await Repository.SearchSubmissionsByLabel(ToolType, FormKey, _searchLabel, _searchValue);
+        }
+
+        _loading = false;
+    }
+
+    private async Task<List<FormSubmission>> LoadAllSubmissions()
+    {
+        var result = new List<FormSubmission>();
+        var folder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FormBuilderData", "submissions", Sanitize(ToolType), Sanitize(FormKey));
+        
+        if (!Directory.Exists(folder)) return result;
+
+        foreach (var file in Directory.GetFiles(folder, "*.json"))
+        {
+            var json = await File.ReadAllTextAsync(file);
+            var submission = System.Text.Json.JsonSerializer.Deserialize<FormSubmission>(json, new System.Text.Json.JsonSerializerOptions 
+            { 
+                Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+            });
+            if (submission is not null)
+            {
+                result.Add(submission);
+            }
+        }
+
+        return result.OrderByDescending(s => s.SubmittedDate).ToList();
+    }
+
+    private static string Sanitize(string input) =>
+        string.Concat(input.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.'));
+}
+
+<style>
+.submissions-viewer {
+    padding: 20px;
+    border-left: 4px solid #4CAF50;
+}
+
+.submissions-header {
+    margin-bottom: 20px;
+}
+
+.submissions-header h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.submissions-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.submissions-controls input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.submissions-list {
+    display: grid;
+    gap: 15px;
+}
+
+.submission-card {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    background: #f9f9f9;
+}
+
+.submission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.submission-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.submission-data table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.submission-data th {
+    background: #f0f0f0;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+}
+
+.submission-data td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.submission-data pre {
+    background: #f5f5f5;
+    padding: 8px;
+    border-radius: 3px;
+    overflow-x: auto;
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.submission-meta {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    color: #999;
+}
+</style>

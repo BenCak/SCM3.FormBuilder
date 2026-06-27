@@ -1,0 +1,120 @@
+{
+  "FormVersionId": "b3313554-dd67-49f4-a346-efcd387797a9",
+  "FormId": "19a21b42-30c0-4bbf-b91c-52b8b6214b2f",
+  "ToolType": "SCM3.Tools.EditForms",
+  "FormKey": "defaultForm",
+  "VersionNumber": 2,
+  "IsPublished": false,
+  "PublishedDate": "0001-01-01T00:00:00",
+  "Sections": [
+    {
+      "SectionId": "a8330c11-59b8-4735-a0a4-7dcda7338076",
+      "Title": "General",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "6a12249f-2e61-42c3-87c6-64cf95e5ce9b",
+          "Type": "Number",
+          "Label": "ProjectID",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 5,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "78bad4f4-3153-4f17-aead-051ddc84c18b",
+          "Type": "Text",
+          "Label": "Name",
+          "GridRow": 2,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": {
+            "Required": false,
+            "MaxLength": 10,
+            "RegexPattern": null,
+            "Min": null,
+            "Max": null
+          },
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "4b203d84-73e4-4b17-949d-040ddea29cc9",
+          "Type": "Dropdown",
+          "Label": "State",
+          "GridRow": 3,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": [
+            {
+              "Value": "open",
+              "Label": "Open"
+            },
+            {
+              "Value": "close",
+              "Label": "Close"
+            },
+            {
+              "Value": "notsure",
+              "Label": "NotSure"
+            },
+            {
+              "Value": "abc",
+              "Label": "ABC"
+            }
+          ],
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "23fa428f-647f-470d-a52a-3ef36145555e",
+          "Type": "Checkbox",
+          "Label": "Submit ?",
+          "GridRow": 4,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "3e427962-6370-4372-8e8d-226566b01bce",
+          "Type": "RichText",
+          "Label": "Add Notes",
+          "GridRow": 5,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    },
+    {
+      "SectionId": "23b25c8b-0ee8-49c6-8fae-9471145150d4",
+      "Title": "Section 2",
+      "Order": 2,
+      "Fields": [
+        {
+          "FieldId": "a8a83dc0-3276-4e74-ad8c-bc391d02f909",
+          "Type": "Number",
+          "Label": "ProjectID",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}

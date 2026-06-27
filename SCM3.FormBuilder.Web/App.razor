@@ -1,0 +1,12 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using SCM3.FormBuilder.UI.Designer
+@using SCM3.FormBuilder.UI.Renderer
+
+<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(FormDesigner).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+    </Found>
+    <NotFound>
+        <p>Page not found.</p>
+    </NotFound>
+</Router>

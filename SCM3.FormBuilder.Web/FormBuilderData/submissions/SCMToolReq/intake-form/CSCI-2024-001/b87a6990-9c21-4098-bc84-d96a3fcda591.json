@@ -1,0 +1,30 @@
+{
+  "SubmissionId": "b87a6990-9c21-4098-bc84-d96a3fcda591",
+  "FormVersionId": "4a8481af-4750-450c-881f-caf685b73ed9",
+  "FormVersionNumber": 2,
+  "ToolType": "SCMToolReq",
+  "FormKey": "intake-form",
+  "RecordPrimaryKey": "CSCI-2024-001",
+  "Values": {
+    "8fba5c13-fa08-4680-b765-eeca2fc4632b": {
+      "Label": "Name",
+      "Value": "Test System 2 - Updated"
+    },
+    "48a9f1fa-d639-422e-93fb-23f55f455ede": {
+      "Label": "Version",
+      "Value": "1.1.0"
+    },
+    "ecf5f028-06b6-4e8e-a2ef-63c6d74b0aaf": {
+      "Label": "Location",
+      "Value": "Building B"
+    },
+    "6874f709-4560-4a20-bb4e-973114ff119a": {
+      "Label": "Engine Config",
+      "Value": [
+        "2-engine"
+      ]
+    }
+  },
+  "SubmittedDate": "2026-06-27T05:43:21.4749206Z",
+  "SubmittedBy": ""
+}

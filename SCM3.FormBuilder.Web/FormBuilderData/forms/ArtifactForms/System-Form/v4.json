@@ -1,0 +1,54 @@
+{
+  "FormVersionId": "760464ab-5294-4e79-8402-b6c2d61b025d",
+  "FormId": "ea352cca-46f1-45eb-94ac-af3b31d65038",
+  "ToolType": "ArtifactForms",
+  "FormKey": "System-Form",
+  "VersionNumber": 4,
+  "IsPublished": true,
+  "PublishedDate": "2026-06-27T06:38:23.7714988Z",
+  "Sections": [
+    {
+      "SectionId": "63fcc261-a323-41e5-9756-eebf00d3c3bd",
+      "Title": "General",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "bd8410d6-25eb-4909-8590-83fda332c077",
+          "Type": "Text",
+          "Label": "New Text field 1",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "cd71f8ec-d0e1-40ad-9d52-0fe8c9d09f30",
+          "Type": "Text",
+          "Label": "New Text field 2",
+          "GridRow": 2,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "ee73d418-8987-4bc4-8450-9e4801869978",
+          "Type": "Text",
+          "Label": "New Text field 3",
+          "GridRow": 3,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}

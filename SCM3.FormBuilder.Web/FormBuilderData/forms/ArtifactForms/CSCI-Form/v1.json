@@ -1,0 +1,79 @@
+{
+  "FormVersionId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "FormId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "ToolType": "ArtifactForms",
+  "FormKey": "CSCI-Form",
+  "VersionNumber": 1,
+  "IsPublished": true,
+  "PublishedDate": "2026-06-27T00:00:00Z",
+  "Sections": [
+    {
+      "SectionId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab",
+      "Title": "CSCI Details",
+      "Order": 1,
+      "Fields": [
+        {
+          "FieldId": "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa",
+          "Type": "Text",
+          "Label": "CSCI Name",
+          "GridRow": 1,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaab",
+          "Type": "Text",
+          "Label": "Version",
+          "GridRow": 2,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaac",
+          "Type": "Text",
+          "Label": "Location",
+          "GridRow": 3,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaad",
+          "Type": "Dropdown",
+          "Label": "Engine Config",
+          "GridRow": 4,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": [
+            {
+              "Value": "1-engine",
+              "Label": "1 Engine"
+            },
+            {
+              "Value": "2-engine",
+              "Label": "2 Engine"
+            },
+            {
+              "Value": "3-engine",
+              "Label": "3 Engine"
+            }
+          ],
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        }
+      ]
+    }
+  ]
+}
