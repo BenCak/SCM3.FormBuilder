@@ -16,100 +16,95 @@
         @switch (Field.Type)
         {
             case FieldType.Text:
-                <input type="text"
-                       value="@CurrentValue"
-                       disabled="@(!RenderState.Enabled)"
-                       readonly="@RenderState.ReadOnly"
-                       maxlength="@Field.Validation?.MaxLength"
-                       @onchange="OnValueChanged"
-                       class="fb-input" />
+                <TelerikTextBox Value="@CurrentValue"
+                                ValueChanged="@((string? v) => NotifyString(v))"
+                                Enabled="@RenderState.Enabled"
+                                ReadOnly="@RenderState.ReadOnly"
+                                PlaceHolder="@(Field.Placeholder ?? "")"
+                                MaxLength="@(Field.Validation?.MaxLength ?? int.MaxValue)"
+                                Width="100%" />
                 break;
 
             case FieldType.Number:
-                <input type="number"
-                       value="@CurrentValue"
-                       disabled="@(!RenderState.Enabled)"
-                       readonly="@RenderState.ReadOnly"
-                       min="@Field.Validation?.Min"
-                       max="@Field.Validation?.Max"
-                       @onchange="OnValueChanged"
-                       class="fb-input" />
+                <TelerikNumericTextBox T="decimal?"
+                                       @bind-Value:get="_numericValue"
+                                       @bind-Value:set="OnNumericSet"
+                                       Enabled="@RenderState.Enabled"
+                                       Min="@(Field.Validation?.Min)"
+                                       Max="@(Field.Validation?.Max)"
+                                       Decimals="@Field.Decimals"
+                                       Width="100%" />
                 break;
 
             case FieldType.Date:
+                <TelerikDatePicker Value="@CurrentDate"
+                                   ValueChanged="@((DateTime? v) => NotifyString(v?.ToString("yyyy-MM-dd")))"
+                                   Enabled="@RenderState.Enabled"
+                                   Width="100%" />
+                break;
+
             case FieldType.DateTimePicker:
-                <input type="@(Field.Type == FieldType.Date ? "date" : "datetime-local")"
-                       value="@CurrentValue"
-                       disabled="@(!RenderState.Enabled)"
-                       readonly="@RenderState.ReadOnly"
-                       @onchange="OnValueChanged"
-                       class="fb-input" />
+                <TelerikDateTimePicker Value="@CurrentDate"
+                                       ValueChanged="@((DateTime? v) => NotifyString(v?.ToString("yyyy-MM-ddTHH:mm")))"
+                                       Enabled="@RenderState.Enabled"
+                                       Width="100%" />
                 break;
 
             case FieldType.Dropdown:
-                <select value="@CurrentValue"
-                        disabled="@(!RenderState.Enabled)"
-                        @onchange="OnValueChanged"
-                        class="fb-input">
-                    <option value="">-- select --</option>
-                    @if (Field.Options is not null)
-                    {
-                        @foreach (var opt in Field.Options)
-                        {
-                            <option value="@opt.Value">@opt.Label</option>
-                        }
-                    }
-                </select>
+                <TelerikDropDownList Data="@(Field.Options ?? new())"
+                                     Value="@CurrentValue"
+                                     ValueChanged="@((string? v) => NotifyString(v))"
+                                     TextField="@nameof(FieldOption.Label)"
+                                     ValueField="@nameof(FieldOption.Value)"
+                                     DefaultText="@(Field.Placeholder ?? "-- select --")"
+                                     Enabled="@RenderState.Enabled"
+                                     Width="100%" />
                 break;
 
             case FieldType.ComboBox:
-                <input type="text"
-                       value="@CurrentValue"
-                       disabled="@(!RenderState.Enabled)"
-                       readonly="@RenderState.ReadOnly"
-                       placeholder="-- select or type --"
-                       maxlength="@Field.Validation?.MaxLength"
-                       @onchange="OnValueChanged"
-                       class="fb-input" />
+                <TelerikComboBox Data="@(Field.Options ?? new())"
+                                 Value="@CurrentValue"
+                                 ValueChanged="@((string? v) => NotifyString(v))"
+                                 TextField="@nameof(FieldOption.Label)"
+                                 ValueField="@nameof(FieldOption.Value)"
+                                 AllowCustom="@Field.AllowCustomValue"
+                                 Placeholder="@(Field.Placeholder ?? "-- select or type --")"
+                                 Enabled="@RenderState.Enabled"
+                                 Width="100%" />
                 break;
 
             case FieldType.Checkbox:
-                <input type="checkbox"
-                       checked="@(CurrentValue == "true")"
-                       disabled="@(!RenderState.Enabled)"
-                       @onchange="OnCheckboxChanged"
-                       class="fb-checkbox" />
+                <TelerikCheckBox Value="@(CurrentValue == "true")"
+                                 ValueChanged="@((bool v) => NotifyString(v ? "true" : "false"))"
+                                 Enabled="@RenderState.Enabled" />
                 break;
 
             case FieldType.TextArea:
-                <textarea disabled="@(!RenderState.Enabled)"
-                          readonly="@RenderState.ReadOnly"
-                          maxlength="@Field.Validation?.MaxLength"
-                          @onchange="OnValueChanged"
-                          class="fb-input fb-textarea">@CurrentValue</textarea>
+                <TelerikTextArea Value="@(CurrentValue ?? "")"
+                                 ValueChanged="@((string v) => NotifyString(v))"
+                                 Enabled="@RenderState.Enabled"
+                                 ReadOnly="@RenderState.ReadOnly"
+                                 PlaceHolder="@(Field.Placeholder ?? "")"
+                                 MaxLength="@(Field.Validation?.MaxLength ?? int.MaxValue)"
+                                 Width="100%"
+                                 AutoSize="true" />
                 break;
 
             case FieldType.MultiSelect:
-                <select multiple="multiple"
-                        disabled="@(!RenderState.Enabled)"
-                        @onchange="OnMultiSelectChanged"
-                        class="fb-input">
-                    @if (Field.Options is not null)
-                    {
-                        @foreach (var opt in Field.Options)
-                        {
-                            var isSelected = SelectedMultiValues?.Contains(opt.Value) ?? false;
-                            <option value="@opt.Value" selected="@isSelected">@opt.Label</option>
-                        }
-                    }
-                </select>
+                <TelerikMultiSelect Data="@(Field.Options ?? new())"
+                                    Value="@SelectedMultiValues"
+                                    ValueChanged="@((List<string> v) => NotifyMulti(v))"
+                                    TextField="@nameof(FieldOption.Label)"
+                                    ValueField="@nameof(FieldOption.Value)"
+                                    Placeholder="@(Field.Placeholder ?? "-- select --")"
+                                    Enabled="@RenderState.Enabled"
+                                    Width="100%" />
                 break;
 
             case FieldType.RichText:
-                <textarea disabled="@(!RenderState.Enabled)"
-                          readonly="@RenderState.ReadOnly"
-                          @onchange="OnValueChanged"
-                          class="fb-input fb-textarea">@CurrentValue</textarea>
+                <TelerikEditor Value="@(CurrentValue ?? "")"
+                               ValueChanged="@((string v) => NotifyString(v))"
+                               Height="200px" />
                 break;
         }
 
@@ -128,44 +123,51 @@
     [Parameter] public bool ShowValidationError { get; set; }
     [Parameter] public string? ValidationErrorMessage { get; set; }
 
-    private string? CurrentValue
+    private decimal? _numericValue;
+    private string? _lastKnownFieldId;
+
+    protected override void OnParametersSet()
     {
-        get => Values.TryGetValue(Field.FieldId, out var v) ? v?.ToString() : null;
-        set { if (value is not null) Values[Field.FieldId] = value; }
+        if (Field.Type == FieldType.Number && _lastKnownFieldId != Field.FieldId)
+        {
+            _lastKnownFieldId = Field.FieldId;
+            var raw = Values.TryGetValue(Field.FieldId, out var v) ? v?.ToString() : Field.DefaultValue;
+            _numericValue = decimal.TryParse(raw, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : null;
+        }
     }
 
-    private List<string>? SelectedMultiValues
+    private async Task OnNumericSet(decimal? v)
+    {
+        _numericValue = v;
+        await NotifyString(v?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private string? CurrentValue
     {
         get
         {
-            if (Values.TryGetValue(Field.FieldId, out var v) && v is string strVal)
-            {
-                return strVal.Split(',').Where(s => !string.IsNullOrEmpty(s)).ToList();
-            }
+            if (Values.TryGetValue(Field.FieldId, out var v)) return v?.ToString();
+            return Field.DefaultValue;
+        }
+    }
+
+    private DateTime? CurrentDate =>
+        DateTime.TryParse(CurrentValue, out var d) ? d : (DateTime?)null;
+
+    private List<string> SelectedMultiValues
+    {
+        get
+        {
+            if (Values.TryGetValue(Field.FieldId, out var v) && v is string s)
+                return s.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
             return new List<string>();
         }
-        set
-        {
-            if (value is not null)
-            {
-                Values[Field.FieldId] = string.Join(",", value);
-            }
-        }
     }
 
-    private async Task OnValueChanged(ChangeEventArgs e)
-    {
-        await OnFieldValueChanged.InvokeAsync((Field.FieldId, e.Value));
-    }
+    private async Task NotifyString(string? value) =>
+        await OnFieldValueChanged.InvokeAsync((Field.FieldId, (object?)value));
 
-    private async Task OnCheckboxChanged(ChangeEventArgs e)
-    {
-        await OnFieldValueChanged.InvokeAsync((Field.FieldId, e.Value));
-    }
-
-    private async Task OnMultiSelectChanged(ChangeEventArgs e)
-    {
-        // For HTML multi-select, treat as single value
-        await OnFieldValueChanged.InvokeAsync((Field.FieldId, e.Value));
-    }
+    private async Task NotifyMulti(List<string> values) =>
+        await OnFieldValueChanged.InvokeAsync((Field.FieldId, (object?)string.Join(",", values)));
 }

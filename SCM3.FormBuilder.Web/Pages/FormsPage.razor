@@ -1,0 +1,173 @@
+@page "/forms"
+@rendermode InteractiveServer
+@using SCM3.FormBuilder.Core.Models
+@using SCM3.FormBuilder.Data
+@using SCM3.FormBuilder.UI.Designer
+
+@inject IFormRepository Repository
+
+<div style="display:flex;height:calc(100vh - 60px);gap:0">
+
+    <!-- LEFT SIDEBAR -->
+    <div style="width:260px;min-width:260px;background:#f5f5f5;border-right:1px solid #ddd;display:flex;flex-direction:column">
+        <div style="padding:16px;border-bottom:1px solid #ddd">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h2 style="margin:0;font-size:1em;color:#333">Forms</h2>
+                <a href="/artifacts" style="font-size:0.8em;color:#1976d2;text-decoration:none">→ Artifacts</a>
+            </div>
+            <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                           OnClick="@ShowCreatePanel"
+                           Class="w-100">+ New Form</TelerikButton>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:8px">
+            @if (_forms == null)
+            {
+                <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
+            }
+            else if (_forms.Count == 0)
+            {
+                <p style="padding:8px;color:#666;font-size:0.9em">No forms yet.</p>
+            }
+            else
+            {
+                @foreach (var form in _forms)
+                {
+                    var isSelected = _selectedToolType == form.ToolType && _selectedFormKey == form.FormKey;
+                    <div style="margin-bottom:4px">
+                        <TelerikButton FillMode="@(isSelected ? ThemeConstants.Button.FillMode.Solid : ThemeConstants.Button.FillMode.Outline)"
+                                       ThemeColor="@(isSelected ? ThemeConstants.Button.ThemeColor.Primary : ThemeConstants.Button.ThemeColor.Base)"
+                                       OnClick="@(() => SelectForm(form.ToolType, form.FormKey))"
+                                       Class="w-100">
+                            <div style="text-align:left;padding:2px 0">
+                                <div style="font-weight:600;font-size:0.9em">@form.FormKey</div>
+                                <div style="font-size:0.8em;opacity:0.75;margin-top:2px">@form.ToolType</div>
+                            </div>
+                        </TelerikButton>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div style="flex:1;overflow-y:auto;padding:24px">
+
+        @if (_creatingNew)
+        {
+            <div style="max-width:480px">
+                <h2 style="margin:0 0 20px 0">New Form</h2>
+                <div style="background:#f9f9f9;border:1px solid #ddd;border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:12px">
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:4px;font-size:0.9em">Tool Type</label>
+                        <TelerikDropDownList Data="@_toolTypeOptions"
+                                             @bind-Value="@_newToolType"
+                                             Width="100%" />
+                    </div>
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:4px;font-size:0.9em">Form Key</label>
+                        <TelerikTextBox @bind-Value="@_newFormKey"
+                                        Placeholder="e.g. CSCI-Form"
+                                        Width="100%" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_createError))
+                    {
+                        <p style="color:#c62828;margin:0;font-size:0.9em">@_createError</p>
+                    }
+                    <div style="display:flex;gap:8px">
+                        <TelerikButton OnClick="@CancelCreate">Cancel</TelerikButton>
+                        <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                                       OnClick="@CreateForm">Create</TelerikButton>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (_selectedFormKey != null && _selectedToolType != null)
+        {
+            <FormDesigner @key="@($"{_selectedToolType}/{_selectedFormKey}")"
+                          ToolType="@_selectedToolType"
+                          FormKey="@_selectedFormKey"
+                          OnPublished="@OnFormPublished" />
+        }
+        else
+        {
+            <div style="text-align:center;color:#888;padding:80px 40px">
+                <p style="font-size:1.1em;font-weight:500">Select a form to edit, or create a new one.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly List<string> _toolTypeOptions = new() { "ArtifactForms", "Custom" };
+
+    private List<(string ToolType, string FormKey)>? _forms;
+    private string? _selectedToolType;
+    private string? _selectedFormKey;
+
+    private bool _creatingNew;
+    private string _newToolType = "ArtifactForms";
+    private string _newFormKey = "";
+    private string _createError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadForms();
+    }
+
+    private async Task LoadForms()
+    {
+        _forms = await Repository.ListForms();
+    }
+
+    private void SelectForm(string toolType, string formKey)
+    {
+        _selectedToolType = toolType;
+        _selectedFormKey = formKey;
+        _creatingNew = false;
+    }
+
+    private void ShowCreatePanel()
+    {
+        _creatingNew = true;
+        _newToolType = "ArtifactForms";
+        _newFormKey = "";
+        _createError = "";
+        _selectedToolType = null;
+        _selectedFormKey = null;
+    }
+
+    private void CancelCreate()
+    {
+        _creatingNew = false;
+    }
+
+    private async Task CreateForm()
+    {
+        _createError = "";
+
+        if (string.IsNullOrWhiteSpace(_newFormKey))
+        {
+            _createError = "Form Key is required.";
+            return;
+        }
+
+        var exists = _forms?.Any(f => f.ToolType == _newToolType && f.FormKey == _newFormKey) ?? false;
+        if (exists)
+        {
+            _createError = "A form with that Tool Type and Form Key already exists.";
+            return;
+        }
+
+        _selectedToolType = _newToolType;
+        _selectedFormKey = _newFormKey;
+        _creatingNew = false;
+
+        await LoadForms();
+    }
+
+    private async Task OnFormPublished(FormVersion version)
+    {
+        await LoadForms();
+    }
+}

@@ -1,12 +1,15 @@
 @using Microsoft.AspNetCore.Components.Routing
-@using SCM3.FormBuilder.UI.Designer
-@using SCM3.FormBuilder.UI.Renderer
+@using SCM3.FormBuilder.Web.Shared
 
-<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(FormDesigner).Assembly }">
+<Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(SCM3.FormBuilder.UI.Designer.FormDesigner).Assembly }">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <p>Page not found.</p>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
     </NotFound>
 </Router>

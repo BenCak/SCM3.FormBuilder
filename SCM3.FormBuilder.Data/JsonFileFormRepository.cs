@@ -46,6 +46,7 @@ public class JsonFileFormRepository : IFormRepository
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
     };
 

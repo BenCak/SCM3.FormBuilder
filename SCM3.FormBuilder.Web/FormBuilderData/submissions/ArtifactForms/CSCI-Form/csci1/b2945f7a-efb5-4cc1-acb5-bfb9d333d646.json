@@ -1,0 +1,28 @@
+{
+  "SubmissionId": "b2945f7a-efb5-4cc1-acb5-bfb9d333d646",
+  "FormVersionId": "a1b2c3d4-1111-1111-1111-111111111111",
+  "FormVersionNumber": 1,
+  "ToolType": "ArtifactForms",
+  "FormKey": "CSCI-Form",
+  "RecordPrimaryKey": "csci1",
+  "Values": {
+    "custom-text": {
+      "Label": "Custom text",
+      "Value": "ths is custom text"
+    },
+    "custom-date": {
+      "Label": "Custom  date",
+      "Value": "2026-07-01"
+    },
+    "custom-dropdown": {
+      "Label": "Custom dropdown",
+      "Value": "option-b"
+    },
+    "08a75234-6573-4865-9c23-ef1c323dce21": {
+      "Label": "custom multiline",
+      "Value": "<p><strong><u>what is the text here ?</u></strong></p><p></p>"
+    }
+  },
+  "SubmittedDate": "2026-06-29T17:47:22.8450884Z",
+  "SubmittedBy": ""
+}

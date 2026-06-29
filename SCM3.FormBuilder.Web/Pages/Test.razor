@@ -1,0 +1,16 @@
+@page "/test"
+
+<h1>Test Page</h1>
+
+<p>Click count: @clickCount</p>
+
+<button @onclick="HandleClick">Click Me</button>
+
+@code {
+    private int clickCount = 0;
+
+    private void HandleClick()
+    {
+        clickCount++;
+    }
+}

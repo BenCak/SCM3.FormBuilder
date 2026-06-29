@@ -1,0 +1,192 @@
+@page "/artifacts"
+@rendermode InteractiveServer
+@using SCM3.FormBuilder.Core.Models
+@using SCM3.FormBuilder.Data
+@using SCM3.FormBuilder.UI.Renderer
+@using SCM3.FormBuilder.UI.Viewer
+
+@inject IFormRepository Repository
+
+<div style="display:flex;height:calc(100vh - 60px);gap:0">
+
+    <!-- LEFT SIDEBAR -->
+    <div style="width:260px;min-width:260px;background:#f5f5f5;border-right:1px solid #ddd;display:flex;flex-direction:column">
+
+        <div style="padding:16px;border-bottom:1px solid #ddd">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <h2 style="margin:0;font-size:1em;color:#333">Artifacts</h2>
+                <a href="/forms" style="font-size:0.8em;color:#1976d2;text-decoration:none">→ Forms</a>
+            </div>
+            <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                           OnClick="@ToggleCreatePanel"
+                           Class="w-100">
+                @(_showCreate ? "− Cancel" : "+ New Artifact")
+            </TelerikButton>
+
+            @if (_showCreate)
+            {
+                <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+                    <TelerikTextBox @bind-Value="@_newId" Placeholder="ID (e.g. CSCI-001)" Width="100%" />
+                    <TelerikTextBox @bind-Value="@_newName" Placeholder="Name" Width="100%" />
+                    <TelerikDropDownList Data="@_artifactTypes"
+                                         @bind-Value="@_newType"
+                                         Width="100%" />
+                    @if (!string.IsNullOrEmpty(_createError))
+                    {
+                        <p style="color:#c62828;margin:0;font-size:0.85em">@_createError</p>
+                    }
+                    <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                                   OnClick="@CreateArtifact"
+                                   Class="w-100">Create</TelerikButton>
+                </div>
+            }
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:8px">
+            @if (_artifacts == null)
+            {
+                <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
+            }
+            else if (_artifacts.Count == 0)
+            {
+                <p style="padding:8px;color:#666;font-size:0.9em">No artifacts yet.</p>
+            }
+            else
+            {
+                @foreach (var artifact in _artifacts)
+                {
+                    var isSelected = _selected?.ArtifactId == artifact.ArtifactId;
+                    <div style="margin-bottom:4px">
+                        <TelerikButton FillMode="@(isSelected ? ThemeConstants.Button.FillMode.Solid : ThemeConstants.Button.FillMode.Outline)"
+                                       ThemeColor="@(isSelected ? ThemeConstants.Button.ThemeColor.Primary : ThemeConstants.Button.ThemeColor.Base)"
+                                       OnClick="@(() => SelectArtifact(artifact))"
+                                       Class="w-100">
+                            <div style="text-align:left;padding:2px 0">
+                                <div style="font-weight:600;font-size:0.9em">@artifact.ArtifactId</div>
+                                <div style="font-size:0.8em;opacity:0.75;margin-top:2px">@artifact.Type · @artifact.Name</div>
+                            </div>
+                        </TelerikButton>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div style="flex:1;overflow-y:auto;padding:24px">
+        @if (_selected == null)
+        {
+            <div style="text-align:center;color:#888;padding:80px 40px">
+                <p style="font-size:1.1em;font-weight:500">Select an artifact, or create a new one.</p>
+            </div>
+        }
+        else
+        {
+            var formKey = ArtifactTypeToFormKey.GetValueOrDefault(_selected.Type);
+
+            <div style="margin-bottom:16px">
+                <h2 style="margin:0 0 4px 0;font-size:1.2em">@_selected.ArtifactId</h2>
+                <p style="margin:0;color:#666;font-size:0.9em">@_selected.Type · @_selected.Name</p>
+            </div>
+
+            @if (formKey == null)
+            {
+                <p style="color:#c62828">No form mapped for artifact type "@_selected.Type".</p>
+            }
+            else
+            {
+                <TelerikTabStrip @bind-ActiveTabIndex="@_activeTabIndex">
+                    <TabStripTab Title="Fill Form">
+                        <FormRenderer @key="@($"ArtifactForms/{formKey}/{_selected.ArtifactId}")"
+                                      ToolType="ArtifactForms"
+                                      FormKey="@formKey"
+                                      RecordPrimaryKey="@_selected.ArtifactId" />
+                    </TabStripTab>
+                    <TabStripTab Title="Submissions">
+                        <SubmissionsViewer @key="@($"ArtifactForms/{formKey}/{_selected.ArtifactId}/submissions")"
+                                           ToolType="ArtifactForms"
+                                           FormKey="@formKey" />
+                    </TabStripTab>
+                </TelerikTabStrip>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly Dictionary<string, string> ArtifactTypeToFormKey = new()
+    {
+        { "CSCI",    "CSCI-Form"    },
+        { "Segment", "Segment-Form" },
+        { "System",  "System-Form"  }
+    };
+
+    private static readonly List<string> _artifactTypes = new() { "CSCI", "Segment", "System" };
+
+    private List<Artifact>? _artifacts;
+    private Artifact? _selected;
+    private int _activeTabIndex;
+
+    private bool _showCreate;
+    private string _newId = "";
+    private string _newName = "";
+    private string _newType = "CSCI";
+    private string _createError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadArtifacts();
+    }
+
+    private async Task LoadArtifacts()
+    {
+        _artifacts = await Repository.ListArtifacts();
+    }
+
+    private void SelectArtifact(Artifact artifact)
+    {
+        _selected = artifact;
+        _activeTabIndex = 0;
+        _showCreate = false;
+    }
+
+    private void ToggleCreatePanel()
+    {
+        _showCreate = !_showCreate;
+        if (_showCreate)
+        {
+            _newId = "";
+            _newName = "";
+            _newType = "CSCI";
+            _createError = "";
+        }
+    }
+
+    private async Task CreateArtifact()
+    {
+        _createError = "";
+
+        if (string.IsNullOrWhiteSpace(_newId))   { _createError = "ID is required.";   return; }
+        if (string.IsNullOrWhiteSpace(_newName))  { _createError = "Name is required."; return; }
+
+        if (_artifacts?.Any(a => a.ArtifactId == _newId) == true)
+        {
+            _createError = "An artifact with that ID already exists.";
+            return;
+        }
+
+        var artifact = new Artifact
+        {
+            ArtifactId  = _newId.Trim(),
+            Name        = _newName.Trim(),
+            Type        = _newType,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        await Repository.SaveArtifact(artifact);
+        await LoadArtifacts();
+
+        _showCreate = false;
+        SelectArtifact(artifact);
+    }
+}

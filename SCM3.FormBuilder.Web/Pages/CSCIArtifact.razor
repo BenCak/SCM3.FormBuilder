@@ -1,0 +1,135 @@
+@page "/artifact/csci/{ArtifactId}"
+@rendermode InteractiveServer
+@using SCM3.FormBuilder.UI.Renderer
+@using SCM3.FormBuilder.UI.Viewer
+@using SCM3.FormBuilder.Core.Models
+@using System.Text.Json
+
+@inject NavigationManager NavigationManager
+
+<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+    <h1 style="margin:0">CSCI Artifact: @ArtifactId</h1>
+    <div style="margin-left:auto">
+        <TelerikButton OnClick="@BackToIndex">← Back</TelerikButton>
+    </div>
+</div>
+
+@if (_artifactMetadata != null)
+{
+    <div style="background:#f0f0f0;padding:12px;border-radius:4px;margin-bottom:16px;border-left:4px solid #2196F3">
+        <p style="margin:0"><strong>Name:</strong> @_artifactMetadata.Name</p>
+        <p style="margin:8px 0 0 0"><strong>Type:</strong> CSCI | <strong>Created:</strong> @_artifactMetadata.CreatedDate:G</p>
+    </div>
+}
+
+<TelerikTabStrip>
+    <TabStripTab Title="Fill Form">
+        <FormRenderer FormKey="CSCI-Form" ToolType="ArtifactForms" RecordPrimaryKey="@ArtifactId" />
+    </TabStripTab>
+    <TabStripTab Title="View Submissions">
+        @if (_filteredSubmissions == null)
+        {
+            <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
+        }
+        else if (_filteredSubmissions.Count == 0)
+        {
+            <p style="color:#666;padding:16px 0">No submissions found for this artifact.</p>
+        }
+        else
+        {
+            <div class="submissions-list" style="padding-top:16px">
+                @foreach (var submission in _filteredSubmissions.OrderByDescending(s => s.SubmittedDate))
+                {
+                    <div style="border:1px solid #ddd;border-radius:4px;padding:12px;margin-bottom:12px">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                            <strong>Submission @submission.SubmissionId</strong>
+                            <span style="color:#666;font-size:0.9em">@submission.SubmittedDate:G</span>
+                        </div>
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead>
+                                <tr style="border-bottom:2px solid #ddd">
+                                    <th style="text-align:left;padding:8px">Label</th>
+                                    <th style="text-align:left;padding:8px">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var kvp in submission.Values.OrderBy(v => v.Value.Label))
+                                {
+                                    <tr style="border-bottom:1px solid #eee">
+                                        <td style="padding:8px;font-weight:500">@kvp.Value.Label</td>
+                                        <td style="padding:8px">
+                                            @if (kvp.Value.Value is bool b) { <span>@(b ? "✓ Yes" : "✗ No")</span> }
+                                            else if (kvp.Value.Value is string s && s.Contains("\n")) { <pre style="background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto">@s</pre> }
+                                            else { <span>@kvp.Value.Value</span> }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div style="margin-top:8px;font-size:0.85em;color:#666">
+                            <small>Version: @submission.FormVersionNumber | By: @submission.SubmittedBy</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </TabStripTab>
+</TelerikTabStrip>
+
+@code {
+    [Parameter]
+    public string? ArtifactId { get; set; }
+
+    private Artifact? _artifactMetadata;
+    private List<FormSubmission>? _filteredSubmissions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(ArtifactId))
+        {
+            await LoadArtifactMetadata();
+            await LoadFilteredSubmissions();
+        }
+    }
+
+    private async Task LoadArtifactMetadata()
+    {
+        try
+        {
+            var artifactPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FormBuilderData", "artifacts", $"{ArtifactId}.json");
+            if (File.Exists(artifactPath))
+            {
+                var json = await File.ReadAllTextAsync(artifactPath);
+                _artifactMetadata = System.Text.Json.JsonSerializer.Deserialize<Artifact>(json, new System.Text.Json.JsonSerializerOptions
+                {
+                    Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+                });
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error loading artifact metadata: {ex.Message}"); }
+    }
+
+    private async Task LoadFilteredSubmissions()
+    {
+        _filteredSubmissions = new List<FormSubmission>();
+        try
+        {
+            var submissionsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FormBuilderData", "submissions", "ArtifactForms", "CSCI-Form", ArtifactId ?? "");
+            if (Directory.Exists(submissionsPath))
+            {
+                foreach (var file in Directory.GetFiles(submissionsPath, "*.json"))
+                {
+                    var json = await File.ReadAllTextAsync(file);
+                    var submission = System.Text.Json.JsonSerializer.Deserialize<FormSubmission>(json, new System.Text.Json.JsonSerializerOptions
+                    {
+                        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+                    });
+                    if (submission is not null) _filteredSubmissions.Add(submission);
+                }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error loading submissions: {ex.Message}"); }
+    }
+
+    private void BackToIndex() => NavigationManager.NavigateTo("/");
+}

@@ -1,4 +1,5 @@
 @page "/"
+@using Microsoft.AspNetCore.Components.Web
 @namespace SCM3.FormBuilder.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
@@ -9,11 +10,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SCM3 Form Builder - POC</title>
     <base href="~/" />
+    <link rel="stylesheet" href="_content/Telerik.UI.for.Blazor/css/kendo-theme-bootstrap/all.css" />
+    <link rel="stylesheet" href="_content/Telerik.UI.for.Blazor/css/kendo-font-icons/font-icons.css" />
     <link rel="stylesheet" href="~/formbuilder.css" />
     <link rel="stylesheet" href="~/css/site.css" />
+    <script src="_content/Telerik.UI.for.Blazor/js/telerik-blazor.js"></script>
+    <component type="typeof(HeadOutlet)" render-mode="Server" />
 </head>
 <body>
-    <component type="typeof(SCM3.FormBuilder.Web.App)" render-mode="Server" />
+    <component type="typeof(App)" render-mode="Server" />
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            An error has occurred. This application may no longer respond until reloaded.
+        </environment>
+        <environment include="Development">
+            An unhandled exception has occurred. See browser dev tools for details.
+        </environment>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
 
     <script src="_framework/blazor.server.js"></script>
 </body>

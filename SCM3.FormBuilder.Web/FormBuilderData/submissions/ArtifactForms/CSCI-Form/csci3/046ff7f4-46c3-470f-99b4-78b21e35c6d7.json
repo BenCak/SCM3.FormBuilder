@@ -1,0 +1,32 @@
+{
+  "SubmissionId": "046ff7f4-46c3-470f-99b4-78b21e35c6d7",
+  "FormVersionId": "c8a885cd-c9c2-491b-8c9a-87f6e88aaf8f",
+  "FormVersionNumber": 2,
+  "ToolType": "ArtifactForms",
+  "FormKey": "CSCI-Form",
+  "RecordPrimaryKey": "csci3",
+  "Values": {
+    "9dcee0e8-da9c-430d-8c67-f148bd919a80": {
+      "Label": "Custom text",
+      "Value": "123"
+    },
+    "c4cf5ba0-83c8-408f-9e90-0c6548acf866": {
+      "Label": "Custom  date",
+      "Value": "2026-07-02"
+    },
+    "3285643d-77a7-431b-b13c-aedf546a661d": {
+      "Label": "Custom dropdown",
+      "Value": "option-b"
+    },
+    "e14810da-ff17-4a16-9fd3-e5a215889145": {
+      "Label": "custom multiline",
+      "Value": "<p>test</p>"
+    },
+    "f7609ba9-599b-4aac-9d84-59760da4ebc7": {
+      "Label": "custom multiselect",
+      "Value": "com4,com1"
+    }
+  },
+  "SubmittedDate": "2026-06-29T18:13:18.6571427Z",
+  "SubmittedBy": ""
+}

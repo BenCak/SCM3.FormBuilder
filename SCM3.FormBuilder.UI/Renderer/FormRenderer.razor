@@ -6,7 +6,7 @@
 
 @if (_loading)
 {
-    <p class="fb-loading">Loading form...</p>
+    <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
 }
 else if (_version is null)
 {
@@ -15,10 +15,17 @@ else if (_version is null)
 else
 {
     <div class="fb-form">
-        <div class="fb-artifact-selector">
-            <label>Artifact ID:</label>
-            <span style="padding:8px 12px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;display:inline-block;min-width:200px;font-family:monospace">@(_artifactId ?? "(Not set)")</span>
-        </div>
+        @if (!string.IsNullOrWhiteSpace(_artifactId))
+        {
+            <div class="fb-artifact-selector">
+                <label>Artifact ID:</label>
+                <span style="padding:8px 12px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;display:inline-block;min-width:200px;font-family:monospace">@_artifactId</span>
+                @if (_version is not null)
+                {
+                    <span style="font-size:0.8em;color:#888;margin-left:8px">v@(_version.VersionNumber)</span>
+                }
+            </div>
+        }
 
         @foreach (var sectionItem in _version.Sections.OrderBy(s => s.Order))
         {
@@ -31,70 +38,108 @@ else
                             ? s
                             : new FieldRenderState(true, true, false);
 
+                        var effectiveState = ReadOnly
+                            ? new FieldRenderState(state.Visible, false, true)
+                            : state;
+
+                        var hasError = _fieldErrors.TryGetValue(field.FieldId, out var errMsg);
+
                         <FieldRendererControl Field="field"
-                                              RenderState="state"
+                                              RenderState="effectiveState"
                                               Values="_values"
-                                              OnFieldValueChanged="HandleFieldValueChanged" />
+                                              OnFieldValueChanged="HandleFieldValueChanged"
+                                              ShowValidationError="hasError"
+                                              ValidationErrorMessage="@errMsg" />
                     }
                 </div>
             </div>
         }
 
-        <div class="fb-actions">
-            <button class="fb-btn" @onclick="HandleCancel">Cancel</button>
-            <button class="fb-btn fb-btn-primary" @onclick="HandleSave" disabled="@(_saving || string.IsNullOrWhiteSpace(_artifactId))">Save</button>
-        </div>
-
-        @if (_validationErrors.Count > 0)
+        @if (!ReadOnly)
         {
-            <div class="fb-validation-summary">
-                @foreach (var err in _validationErrors)
-                {
-                    <p class="fb-error">@err</p>
-                }
+            <div class="fb-actions">
+                <TelerikButton OnClick="@HandleCancel">Cancel</TelerikButton>
+                <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                               OnClick="@HandleSave"
+                               Enabled="@(!_saving && !string.IsNullOrWhiteSpace(_artifactId))">
+                    @if (_saving) { <span>Saving...</span> }
+                    else if (_saved) { <span>Saved ✓</span> }
+                    else { <span>Save</span> }
+                </TelerikButton>
             </div>
+
+            @if (_validationErrors.Count > 0)
+            {
+                <div class="fb-validation-summary">
+                    @foreach (var err in _validationErrors)
+                    {
+                        <p class="fb-error">@err</p>
+                    }
+                </div>
+            }
         }
     </div>
 }
 
 @code {
-    // Required: which form, for which tool
     [Parameter, EditorRequired] public string ToolType { get; set; } = "";
     [Parameter, EditorRequired] public string FormKey { get; set; } = "";
-    [Parameter] public string RecordPrimaryKey { get; set; } = ""; // Deprecated - kept for compatibility
+    [Parameter] public string RecordPrimaryKey { get; set; } = "";
+    [Parameter] public bool ReadOnly { get; set; }
 
     // Fired after a successful save, with the raw values the host can do
     // its own cross-cutting validation against if it needs to.
     [Parameter] public EventCallback<Dictionary<string, object?>> OnSaved { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnSavedByLabel { get; set; }
     [Parameter] public EventCallback OnCancelled { get; set; }
 
     [Inject] private IFormRepository Repository { get; set; } = null!;
 
     private FormVersion? _version;
-    private List<FormSubmission> _existingSubmissions = new();
-    private Dictionary<string, object?> _values = new(); // temporary storage for actual values during editing
+    private Dictionary<string, object?> _values = new();
     private Dictionary<string, FieldRenderState> _renderStates = new();
     private readonly ConditionalRuleEvaluator _evaluator = new();
     private readonly List<string> _validationErrors = new();
+    private Dictionary<string, string> _fieldErrors = new();
     private string _artifactId = "";
+    private string _loadedFormKey = "";
+    private string _loadedToolType = "";
+    private Guid? _existingSubmissionId;
     private bool _loading = true;
     private bool _saving;
+    private bool _saved;
 
     protected override async Task OnInitializedAsync()
     {
         _artifactId = RecordPrimaryKey ?? "";
+        _loadedFormKey = FormKey;
+        _loadedToolType = ToolType;
         await LoadForm();
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        // When RecordPrimaryKey parameter changes, update _artifactId and reload form if needed
-        if (RecordPrimaryKey != _artifactId)
+        var formChanged = FormKey != _loadedFormKey || ToolType != _loadedToolType;
+        var artifactChanged = RecordPrimaryKey != _artifactId;
+
+        if (formChanged || artifactChanged)
         {
             _artifactId = RecordPrimaryKey ?? "";
-            // Only reload if form key changed
-            if (_version != null)
+            _values.Clear();
+            _validationErrors.Clear();
+            _renderStates.Clear();
+            _existingSubmissionId = null;
+            _saved = false;
+
+            if (formChanged)
             {
+                _loadedFormKey = FormKey;
+                _loadedToolType = ToolType;
+                await LoadForm();
+            }
+            else
+            {
+                await LoadExistingSubmission();
                 StateHasChanged();
             }
         }
@@ -105,9 +150,55 @@ else
     private async Task LoadForm()
     {
         _loading = true;
-        // _artifactId is already set from OnInitializedAsync/OnParametersSetAsync
-        _version = await Repository.GetVersion(ToolType, FormKey); // Get latest published version
+        await LoadSubmissionAndForm();
         _loading = false;
+    }
+
+    private async Task LoadExistingSubmission()
+    {
+        await LoadSubmissionAndForm();
+    }
+
+    // Loads the submission first (if any), then loads the form version that
+    // was used for that submission. Falls back to latest if no submission exists.
+    private async Task LoadSubmissionAndForm()
+    {
+        _existingSubmissionId = null;
+        _values.Clear();
+
+        int? versionToLoad = null;
+
+        if (!string.IsNullOrWhiteSpace(_artifactId))
+        {
+            var submissions = await Repository.GetSubmissions(ToolType, FormKey, _artifactId);
+            var latest = submissions.FirstOrDefault();
+            if (latest is not null)
+            {
+                versionToLoad = latest.FormVersionNumber;
+                _existingSubmissionId = latest.SubmissionId;
+                foreach (var kvp in latest.Values)
+                    _values[kvp.Key] = ExtractJsonValue(kvp.Value.Value);
+            }
+        }
+
+        _version = await Repository.GetVersion(ToolType, FormKey, versionToLoad);
+        RecomputeRenderStates();
+    }
+
+    private static object? ExtractJsonValue(object? raw)
+    {
+        if (raw is System.Text.Json.JsonElement el)
+        {
+            return el.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.True   => "true",
+                System.Text.Json.JsonValueKind.False  => "false",
+                System.Text.Json.JsonValueKind.Null   => null,
+                System.Text.Json.JsonValueKind.String => el.GetString(),
+                _                                      => el.GetRawText()
+            };
+        }
+        return raw?.ToString();
     }
 
     private void RecomputeRenderStates()
@@ -119,19 +210,19 @@ else
     private void HandleFieldValueChanged((string FieldId, object? Value) change)
     {
         _values[change.FieldId] = change.Value;
-        RecomputeRenderStates(); // live re-evaluation, per the conditional rule loop
+        _fieldErrors.Remove(change.FieldId);
+        _saved = false;
+        RecomputeRenderStates();
         StateHasChanged();
     }
 
     private async Task HandleSave()
     {
         _validationErrors.Clear();
+        _fieldErrors = new();
 
         if (_version is null || string.IsNullOrWhiteSpace(_artifactId)) return;
 
-        // Layer 1 validation: the schema's own declared rules. A field that
-        // is currently hidden is skipped - you cannot be required to fill
-        // in something you were never shown.
         foreach (var section in _version.Sections)
         {
             foreach (var field in section.Fields)
@@ -146,11 +237,24 @@ else
 
                 if (rule.Required && string.IsNullOrWhiteSpace(value))
                 {
-                    _validationErrors.Add($"{field.Label} is required.");
+                    var msg = $"{field.Label} is required.";
+                    _validationErrors.Add(msg);
+                    _fieldErrors[field.FieldId] = msg;
                 }
-                if (rule.MaxLength.HasValue && value?.Length > rule.MaxLength)
+                else if (rule.MaxLength.HasValue && value?.Length > rule.MaxLength)
                 {
-                    _validationErrors.Add($"{field.Label} exceeds maximum length.");
+                    var msg = $"{field.Label} exceeds maximum length of {rule.MaxLength}.";
+                    _validationErrors.Add(msg);
+                    _fieldErrors[field.FieldId] = msg;
+                }
+                else if (!string.IsNullOrEmpty(rule.RegexPattern) && !string.IsNullOrWhiteSpace(value))
+                {
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(value, rule.RegexPattern))
+                    {
+                        var msg = $"{field.Label} format is invalid.";
+                        _validationErrors.Add(msg);
+                        _fieldErrors[field.FieldId] = msg;
+                    }
                 }
             }
         }
@@ -178,28 +282,28 @@ else
 
         var submission = new FormSubmission
         {
-            SubmissionId = Guid.NewGuid(),
+            SubmissionId = _existingSubmissionId ?? Guid.NewGuid(), // reuse ID to overwrite existing record
             FormVersionId = _version.FormVersionId,
             FormVersionNumber = _version.VersionNumber,
             ToolType = ToolType,
             FormKey = FormKey,
-            RecordPrimaryKey = _artifactId, // Use artifact ID as the record key
+            RecordPrimaryKey = _artifactId,
             Values = submissionValues,
             SubmittedDate = DateTime.UtcNow,
-            SubmittedBy = "" // host app should supply the actual current user
+            SubmittedBy = ""
         };
 
         await Repository.SaveSubmission(submission);
+        _existingSubmissionId = submission.SubmissionId;
         _saving = false;
-
-        // Clear for next submission
-        _values.Clear();
-        _artifactId = "";
+        _saved = true;
         StateHasChanged();
 
-        // Return just the values for the callback
         var valueDict = submissionValues.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Value);
         await OnSaved.InvokeAsync(valueDict);
+
+        var labelDict = submissionValues.ToDictionary(kvp => kvp.Value.Label, kvp => kvp.Value.Value);
+        await OnSavedByLabel.InvokeAsync(labelDict);
     }
 
     private async Task HandleCancel()

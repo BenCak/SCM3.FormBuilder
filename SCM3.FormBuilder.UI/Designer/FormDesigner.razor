@@ -1,11 +1,12 @@
 @namespace SCM3.FormBuilder.UI.Designer
 @using SCM3.FormBuilder.Core.Models
 @using SCM3.FormBuilder.Data
+@using SCM3.FormBuilder.UI.Renderer
 @using Microsoft.AspNetCore.Components.Web
 
 @if (_version is null)
 {
-    <p class="fb-loading">Loading form...</p>
+    <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
 }
 else
 {
@@ -14,7 +15,7 @@ else
         <p class="fb-palette-title">Fields</p>
         @foreach (var type in Enum.GetValues<FieldType>())
         {
-            <div class="fb-palette-item" 
+            <div class="fb-palette-item"
                  draggable="true"
                  @ondragstart="e => OnPaletteDragStart(type, e)"
                  @onclick="() => AddFieldToActiveSection(type)">
@@ -27,68 +28,107 @@ else
     <div class="fb-canvas">
         <div class="fb-canvas-header">
             <div>
-                <p class="fb-form-title">@(_version.IsPublished ? "Published" : "Draft") &middot; @ToolType / @FormKey</p>
+                <p class="fb-form-title">@ToolType / @FormKey</p>
                 <div class="fb-form-subtitle">
-                    <label>Version:</label>
-                    <p>DEBUG: Versions = @(_availableVersions?.Count ?? 0)</p>
-                    <select @onchange="OnVersionChange" style="padding:4px 8px;border-radius:3px;border:1px solid #ccc">
-                        @if (_availableVersions != null && _availableVersions.Count > 0)
+                    <span style="font-size:0.85em;color:#666">
+                        @(_version.IsPublished ? "Published" : "Draft") · v@(_version.VersionNumber)
+                        @if (_availableVersions?.Count > 1)
                         {
-                            @foreach (var (versionNum, isPublished) in _availableVersions.OrderByDescending(v => v.VersionNumber))
-                            {
-                                <option value="@versionNum" selected="@(versionNum == _version.VersionNumber)">
-                                    v@versionNum@(isPublished ? " (published)" : " (draft)")
-                                </option>
-                            }
+                            <span> · </span>
+                            <TelerikDropDownList Data="@VersionItems"
+                                                 Value="@_version.VersionNumber"
+                                                 ValueChanged="@((int v) => OnVersionChange(v))"
+                                                 TextField="@nameof(VersionItem.Label)"
+                                                 ValueField="@nameof(VersionItem.Number)"
+                                                 Width="180px" />
                         }
-                        else
-                        {
-                            <option>No versions found</option>
-                        }
-                    </select>
+                    </span>
                 </div>
             </div>
             <div class="fb-canvas-actions">
-                <button class="fb-btn" @onclick="SaveDraft">Save draft</button>
-                <button class="fb-btn fb-btn-primary" @onclick="Publish" disabled="@_version.IsPublished">Publish</button>
+                <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Outline"
+                               OnClick="@(() => _showPreview = !_showPreview)">
+                    @(_showPreview ? "← Design" : "Preview →")
+                </TelerikButton>
+                @if (_version.IsPublished)
+                {
+                    <span style="font-size:0.85em;color:#388e3c;font-weight:600;padding:0 8px">✓ Published</span>
+                    <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                                   OnClick="@StartNewVersion">New Version</TelerikButton>
+                }
+                else
+                {
+                    <TelerikButton OnClick="@SaveDraft">Save Draft</TelerikButton>
+                    <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                                   OnClick="@Publish">Publish</TelerikButton>
+                }
             </div>
         </div>
 
-        @foreach (var sec in _version.Sections.OrderBy(s => s.Order))
+        @if (_showPreview)
         {
-            var sectionId = sec.SectionId;
-            var sectionObj = sec;
-            var isActive = sec == _activeSection;
-            var isDragOver = _dragOverSectionId == sec.SectionId;
-            <div class="fb-section-editor @(isActive ? "fb-section-active" : "") @(isDragOver ? "fb-section-dragover" : "")"
-                 @onclick="() => _activeSection = sec"
-                 @ondragover="e => OnSectionDragOver(sectionId, e)"
-                 @ondragleave="() => OnSectionDragLeave()"
-                 @ondrop="e => OnSectionDrop(sectionObj, e)">
-                <p class="fb-section-label">Section: @sec.Title @(isActive ? "(selected - new fields go here)" : "")</p>
-
-                @foreach (var field in sec.Fields.OrderBy(f => f.GridRow).ThenBy(f => f.GridColumn))
-                {
-                    <div class="fb-field-card @(field == _selectedField ? "fb-field-card-selected" : "")"
-                         @onclick="() => SelectField(field)" @onclick:stopPropagation="true">
-                        <div class="fb-field-card-row">
-                            <span class="fb-field-card-label">@field.Label</span>
-                            @if (field.ConditionalRules?.Count > 0)
-                            {
-                                <span class="fb-field-badge" title="Has conditional rules">@field.ConditionalRules.Count rule(s)</span>
-                            }
-                        </div>
-                        <p class="fb-field-card-meta">
-                            @field.Type
-                            @(field.Validation?.Required == true ? " · required" : "")
-                            · span @field.GridSpan/12
-                        </p>
-                    </div>
-                }
+            <div style="padding:16px">
+                <FormRenderer ToolType="@ToolType" FormKey="@FormKey" RecordPrimaryKey="" ReadOnly="false" />
             </div>
         }
+        else
+        {
+            @foreach (var sec in _version.Sections.OrderBy(s => s.Order))
+            {
+                var sectionId = sec.SectionId;
+                var sectionObj = sec;
+                var isActive = sec == _activeSection;
+                var isDragOver = _dragOverSectionId == sec.SectionId;
+                <div class="fb-section-editor @(isActive ? "fb-section-active" : "") @(isDragOver ? "fb-section-dragover" : "")"
+                     @onclick="() => _activeSection = sec"
+                     @ondragover="e => OnSectionDragOver(sectionId, e)"
+                     @ondragleave="() => OnSectionDragLeave()"
+                     @ondrop="e => OnSectionDrop(sectionObj, e)">
 
-        <button class="fb-btn fb-btn-block" @onclick="AddSection">Add section</button>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px" @onclick:stopPropagation="true">
+                        <TelerikTextBox @bind-Value="sec.Title"
+                                        PlaceHolder="Section title"
+                                        Width="100%" />
+                        <span style="font-size:0.8em;color:#999;white-space:nowrap">@(isActive ? "active" : "")</span>
+                    </div>
+
+                    @foreach (var field in sec.Fields.OrderBy(f => f.GridRow).ThenBy(f => f.GridColumn))
+                    {
+                        var f = field;
+                        <div class="fb-field-card @(field == _selectedField ? "fb-field-card-selected" : "")"
+                             @onclick="() => SelectField(field)" @onclick:stopPropagation="true">
+                            <div class="fb-field-card-row">
+                                <span class="fb-field-card-label">@field.Label</span>
+                                <div style="display:flex;gap:2px" @onclick:stopPropagation="true">
+                                    <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Flat"
+                                                   Size="@ThemeConstants.Button.Size.Small"
+                                                   OnClick="@(() => MoveField(sectionObj, f, -1))">↑</TelerikButton>
+                                    <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Flat"
+                                                   Size="@ThemeConstants.Button.Size.Small"
+                                                   OnClick="@(() => MoveField(sectionObj, f, 1))">↓</TelerikButton>
+                                    <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Flat"
+                                                   Size="@ThemeConstants.Button.Size.Small"
+                                                   OnClick="@(() => DuplicateField(sectionObj, f))">⧉</TelerikButton>
+                                    @if (field.ConditionalRules?.Count > 0)
+                                    {
+                                        <span class="fb-field-badge" title="Has conditional rules">@field.ConditionalRules.Count rule(s)</span>
+                                    }
+                                </div>
+                            </div>
+                            <p class="fb-field-card-meta">
+                                @field.Type
+                                @(field.Validation?.Required == true ? " · required" : "")
+                                · span @field.GridSpan/12
+                            </p>
+                        </div>
+                    }
+                </div>
+            }
+
+            <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Outline"
+                           OnClick="@AddSection"
+                           Class="w-100">Add section</TelerikButton>
+        }
     </div>
 
     <div class="fb-properties">
@@ -100,49 +140,81 @@ else
         else
         {
             <label class="fb-prop-label">Label</label>
-            <input class="fb-input" value="@_selectedField.Label"
-                   @onchange="e => SetLabel(e)" />
+            <TelerikTextBox @bind-Value="@_selectedField.Label" Width="100%" />
 
             <label class="fb-prop-label">Grid column (1-12)</label>
-            <input class="fb-input" type="number" min="1" max="12" value="@_selectedField.GridColumn"
-                   @onchange="e => SetGridColumn(e)" />
+            <TelerikNumericTextBox @bind-Value="@_selectedField.GridColumn"
+                                   Min="1" Max="12" Decimals="0" Width="100%" />
 
             <label class="fb-prop-label">Grid span</label>
-            <input class="fb-input" type="number" min="1" max="12" value="@_selectedField.GridSpan"
-                   @onchange="e => SetGridSpan(e)" />
+            <TelerikNumericTextBox @bind-Value="@_selectedField.GridSpan"
+                                   Min="1" Max="12" Decimals="0" Width="100%" />
 
             <label class="fb-prop-label">Grid row</label>
-            <input class="fb-input" type="number" min="1" value="@_selectedField.GridRow"
-                   @onchange="e => SetGridRow(e)" />
+            <TelerikNumericTextBox @bind-Value="@_selectedField.GridRow"
+                                   Min="1" Decimals="0" Width="100%" />
 
             @if (_selectedField.Type is FieldType.Dropdown or FieldType.ComboBox or FieldType.MultiSelect)
             {
                 <label class="fb-prop-label">Options (comma separated)</label>
-                <input class="fb-input"
-                       value="@string.Join(",", _selectedField.Options?.Select(o => o.Label) ?? Enumerable.Empty<string>())"
-                       @onchange="e => UpdateSelectedOptions(e.Value?.ToString())" />
+                <TelerikTextBox Value="@OptionsAsCsv"
+                                ValueChanged="@((string v) => UpdateSelectedOptions(v))"
+                                Width="100%" />
             }
 
             @if (_selectedField.Type == FieldType.ComboBox)
             {
                 <label class="fb-prop-checkbox">
-                    <input type="checkbox" checked="@_selectedField.AllowCustomValue"
-                           @onchange="e => UpdateSelected(f => f.AllowCustomValue = (bool)(e.Value ?? false))" />
+                    <TelerikCheckBox @bind-Value="@_selectedField.AllowCustomValue" />
                     Allow custom value
                 </label>
             }
 
             <label class="fb-prop-checkbox">
-                <input type="checkbox" checked="@(_selectedField.Validation?.Required ?? false)"
-                       @onchange="e => UpdateSelected(f => { f.Validation ??= new ValidationRule(); f.Validation.Required = (bool)(e.Value ?? false); })" />
+                <TelerikCheckBox Value="@(_selectedField.Validation?.Required ?? false)"
+                                 ValueChanged="@((bool v) => { _selectedField.Validation ??= new ValidationRule(); _selectedField.Validation.Required = v; })" />
                 Required
             </label>
+
+            @if (_selectedField.Type is FieldType.Text or FieldType.TextArea or FieldType.ComboBox
+                                          or FieldType.Dropdown or FieldType.MultiSelect)
+            {
+                <label class="fb-prop-label">Placeholder</label>
+                <TelerikTextBox @bind-Value="@_selectedField.Placeholder" Width="100%" />
+            }
+
+            <label class="fb-prop-label">Default value</label>
+            <TelerikTextBox @bind-Value="@_selectedField.DefaultValue" Width="100%" />
 
             @if (_selectedField.Type is FieldType.Text or FieldType.ComboBox or FieldType.TextArea)
             {
                 <label class="fb-prop-label">Max length</label>
-                <input class="fb-input" type="number" min="1" value="@(_selectedField.Validation?.MaxLength)"
-                       @onchange="e => UpdateSelected(f => { f.Validation ??= new ValidationRule(); f.Validation.MaxLength = int.TryParse(e.Value?.ToString(), out var val) ? val : null; })" />
+                <TelerikNumericTextBox Value="@((int?)(_selectedField.Validation?.MaxLength))"
+                                       ValueChanged="@((int? v) => { _selectedField.Validation ??= new ValidationRule(); _selectedField.Validation.MaxLength = v; })"
+                                       Min="1" Decimals="0" Width="100%" />
+
+                <label class="fb-prop-label">Regex pattern</label>
+                <TelerikTextBox Value="@(_selectedField.Validation?.RegexPattern)"
+                                ValueChanged="@((string? v) => { _selectedField.Validation ??= new ValidationRule(); _selectedField.Validation.RegexPattern = v; })"
+                                PlaceHolder="e.g. ^\d{4}$"
+                                Width="100%" />
+            }
+
+            @if (_selectedField.Type == FieldType.Number)
+            {
+                <label class="fb-prop-label">Decimal places</label>
+                <TelerikNumericTextBox @bind-Value="@_selectedField.Decimals"
+                                       Min="0" Max="10" Decimals="0" Width="100%" />
+
+                <label class="fb-prop-label">Min</label>
+                <TelerikNumericTextBox Value="@(_selectedField.Validation?.Min)"
+                                       ValueChanged="@((decimal? v) => { _selectedField.Validation ??= new ValidationRule(); _selectedField.Validation.Min = v; })"
+                                       Width="100%" />
+
+                <label class="fb-prop-label">Max</label>
+                <TelerikNumericTextBox Value="@(_selectedField.Validation?.Max)"
+                                       ValueChanged="@((decimal? v) => { _selectedField.Validation ??= new ValidationRule(); _selectedField.Validation.Max = v; })"
+                                       Width="100%" />
             }
 
             <div class="fb-prop-divider">
@@ -153,58 +225,67 @@ else
                     {
                         <div class="fb-rule-chip">
                             @($"{rule.Effect} when {rule.SourceFieldId} {rule.Operator} \"{rule.Value}\"")
-                            <button class="fb-rule-remove" @onclick="() => RemoveRule(rule)"></button>
+                            <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Flat"
+                                           ThemeColor="@ThemeConstants.Button.ThemeColor.Error"
+                                           Size="@ThemeConstants.Button.Size.Small"
+                                           OnClick="@(() => RemoveRule(rule))">✕</TelerikButton>
                         </div>
                     }
                 }
-                <button class="fb-btn fb-btn-block" @onclick="() => _showRuleBuilder = true">Add conditional rule</button>
+                <TelerikButton FillMode="@ThemeConstants.Button.FillMode.Outline"
+                               OnClick="@(() => _showRuleBuilder = true)"
+                               Class="w-100">Add conditional rule</TelerikButton>
             </div>
 
-            <button class="fb-btn fb-btn-danger fb-btn-block" @onclick="RemoveSelectedField">Delete field</button>
+            <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Error"
+                           OnClick="@RemoveSelectedField"
+                           Class="w-100">Delete field</TelerikButton>
         }
     </div>
 </div>
 }
 
-@if (_showRuleBuilder && _selectedField is not null)
-{
-    <div class="fb-modal-backdrop">
-        <div class="fb-modal">
-            <p class="fb-form-title">Add conditional rule for @_selectedField.Label</p>
-
-            <label class="fb-prop-label">When field</label>
-            <select class="fb-input" @bind="_ruleSourceFieldId">
-                @foreach (var f in AllFieldsExcept(_selectedField))
-                {
-                    <option value="@f.FieldId">@f.Label</option>
-                }
-            </select>
-
-            <label class="fb-prop-label">Operator</label>
-            <select class="fb-input" @bind="_ruleOperator">
-                <option value="equals">equals</option>
-                <option value="notEquals">does not equal</option>
-                <option value="contains">contains</option>
-            </select>
-
-            <label class="fb-prop-label">Value</label>
-            <input class="fb-input" @bind="_ruleValue" />
-
-            <label class="fb-prop-label">Effect on @_selectedField.Label</label>
-            <select class="fb-input" value="@_ruleEffect" @onchange="e => _ruleEffect = Enum.Parse<ConditionalEffect>(e.Value?.ToString() ?? nameof(ConditionalEffect.Show))">
-                @foreach (var effect in Enum.GetValues<ConditionalEffect>())
-                {
-                    <option value="@effect">@effect</option>
-                }
-            </select>
-
-            <div class="fb-canvas-actions">
-                <button class="fb-btn" @onclick="() => _showRuleBuilder = false">Cancel</button>
-                <button class="fb-btn fb-btn-primary" @onclick="SaveRule">Add rule</button>
+<TelerikWindow @bind-Visible="@_showRuleBuilder" Modal="true" Width="480px">
+    <WindowTitle>
+        Add conditional rule@(_selectedField is not null ? $" for {_selectedField.Label}" : "")
+    </WindowTitle>
+    <WindowContent>
+        @if (_selectedField is not null)
+        {
+            <div style="display:flex;flex-direction:column;gap:12px">
+                <div>
+                    <label class="fb-prop-label">When field</label>
+                    <TelerikDropDownList Data="@AllFieldsExcept(_selectedField).ToList()"
+                                         @bind-Value="@_ruleSourceFieldId"
+                                         TextField="@nameof(Field.Label)"
+                                         ValueField="@nameof(Field.FieldId)"
+                                         Width="100%" />
+                </div>
+                <div>
+                    <label class="fb-prop-label">Operator</label>
+                    <TelerikDropDownList Data="@_operators"
+                                         @bind-Value="@_ruleOperator"
+                                         Width="100%" />
+                </div>
+                <div>
+                    <label class="fb-prop-label">Value</label>
+                    <TelerikTextBox @bind-Value="@_ruleValue" Width="100%" />
+                </div>
+                <div>
+                    <label class="fb-prop-label">Effect on @_selectedField.Label</label>
+                    <TelerikDropDownList Data="@_effects"
+                                         @bind-Value="@_ruleEffect"
+                                         Width="100%" />
+                </div>
+                <div style="display:flex;gap:8px;margin-top:4px">
+                    <TelerikButton OnClick="@(() => _showRuleBuilder = false)">Cancel</TelerikButton>
+                    <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                                   OnClick="@SaveRule">Add rule</TelerikButton>
+                </div>
             </div>
-        </div>
-    </div>
-}
+        }
+    </WindowContent>
+</TelerikWindow>
 
 @code {
     [Parameter, EditorRequired] public string ToolType { get; set; } = "";
@@ -221,38 +302,68 @@ else
     private string _ruleOperator = "equals";
     private string _ruleValue = "";
     private ConditionalEffect _ruleEffect = ConditionalEffect.Show;
-    
-    // Version selection
+
     private List<(int VersionNumber, bool IsPublished)>? _availableVersions;
-    
-    // Drag and drop state
+    private string _loadedToolType = "";
+    private string _loadedFormKey = "";
+
     private FieldType? _draggedFieldType;
     private string _dragOverSectionId = "";
+    private bool _showPreview;
+
+    private static readonly List<string> _operators = new() { "equals", "notEquals", "contains" };
+    private static readonly List<ConditionalEffect> _effects = Enum.GetValues<ConditionalEffect>().ToList();
+
+    private record VersionItem(int Number, string Label);
+
+    private List<VersionItem>? VersionItems =>
+        _availableVersions?
+            .OrderByDescending(v => v.VersionNumber)
+            .Select(v => new VersionItem(v.VersionNumber, $"v{v.VersionNumber}{(v.IsPublished ? " (published)" : " (draft)")}"))
+            .ToList();
+
+    private string OptionsAsCsv =>
+        string.Join(",", _selectedField?.Options?.Select(o => o.Label) ?? Enumerable.Empty<string>());
 
     protected override async Task OnInitializedAsync()
     {
-        // Load all available versions
+        _loadedToolType = ToolType;
+        _loadedFormKey = FormKey;
+        await LoadForm();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ToolType != _loadedToolType || FormKey != _loadedFormKey)
+        {
+            _loadedToolType = ToolType;
+            _loadedFormKey = FormKey;
+            _selectedField = null;
+            _activeSection = null;
+            await LoadForm();
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task LoadForm()
+    {
         _availableVersions = await Repository.ListVersions(ToolType, FormKey);
 
         var existing = await Repository.GetVersion(ToolType, FormKey);
 
-        if (existing is not null && !existing.IsPublished)
+        if (existing is not null)
         {
-            // Resume editing the existing draft.
             _version = existing;
         }
         else
         {
-            // Either nothing exists yet, or the latest is published -
-            // either way, start a fresh draft version.
-            var nextNumber = (existing?.VersionNumber ?? 0) + 1;
             _version = new FormVersion
             {
                 FormVersionId = Guid.NewGuid(),
                 FormId = Guid.NewGuid(),
                 ToolType = ToolType,
                 FormKey = FormKey,
-                VersionNumber = nextNumber,
+                VersionNumber = 1,
                 IsPublished = false,
                 Sections = new List<Section>
                 {
@@ -264,17 +375,49 @@ else
         _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
     }
 
-    private async Task OnVersionChange(ChangeEventArgs e)
+    private void StartNewVersion()
     {
-        if (int.TryParse(e.Value?.ToString(), out int versionNumber))
+        var nextNumber = _version.VersionNumber + 1;
+        _version = new FormVersion
         {
-            var selectedVersion = await Repository.GetVersion(ToolType, FormKey, versionNumber);
-            if (selectedVersion != null)
-            {
-                _version = selectedVersion;
-                _selectedField = null;
-                _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
-            }
+            FormVersionId = Guid.NewGuid(),
+            FormId = _version.FormId,
+            ToolType = ToolType,
+            FormKey = FormKey,
+            VersionNumber = nextNumber,
+            IsPublished = false,
+            Sections = _version.Sections
+                .Select(s => new Section
+                {
+                    SectionId = Guid.NewGuid().ToString(),
+                    Title = s.Title,
+                    Order = s.Order,
+                    Fields = s.Fields.Select(f => new Field
+                    {
+                        FieldId    = Guid.NewGuid().ToString(),
+                        Type       = f.Type,
+                        Label      = f.Label,
+                        GridRow    = f.GridRow,
+                        GridColumn = f.GridColumn,
+                        GridSpan   = f.GridSpan,
+                        Options    = f.Options?.Select(o => new FieldOption { Value = o.Value, Label = o.Label }).ToList(),
+                        Validation = f.Validation,
+                        ConditionalRules = f.ConditionalRules
+                    }).ToList()
+                }).ToList()
+        };
+        _selectedField = null;
+        _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
+    }
+
+    private async Task OnVersionChange(int versionNumber)
+    {
+        var selected = await Repository.GetVersion(ToolType, FormKey, versionNumber);
+        if (selected != null)
+        {
+            _version = selected;
+            _selectedField = null;
+            _activeSection = _version.Sections.OrderBy(s => s.Order).FirstOrDefault();
         }
     }
 
@@ -294,11 +437,7 @@ else
 
     private void AddFieldToActiveSection(FieldType type)
     {
-        if (_activeSection is null)
-        {
-            // No section exists yet - create one so the click isn't a dead end.
-            AddSection();
-        }
+        if (_activeSection is null) AddSection();
 
         var section = _activeSection!;
         var nextRow = section.Fields.Count == 0 ? 1 : section.Fields.Max(f => f.GridRow) + 1;
@@ -320,70 +459,31 @@ else
         _selectedField = field;
     }
 
-    // Drag and drop handlers
     private void OnPaletteDragStart(FieldType fieldType, DragEventArgs e)
     {
         _draggedFieldType = fieldType;
         if (e.DataTransfer != null)
-        {
             e.DataTransfer.EffectAllowed = "copy";
-        }
     }
 
     private void OnSectionDragOver(string sectionId, DragEventArgs e)
     {
         _dragOverSectionId = sectionId;
         if (e.DataTransfer != null)
-        {
             e.DataTransfer.DropEffect = "copy";
-        }
     }
 
-    private void OnSectionDragLeave()
-    {
-        _dragOverSectionId = "";
-    }
+    private void OnSectionDragLeave() => _dragOverSectionId = "";
 
     private void OnSectionDrop(Section section, DragEventArgs e)
     {
         _dragOverSectionId = "";
-
         if (_draggedFieldType.HasValue)
         {
             _activeSection = section;
             AddFieldToActiveSection(_draggedFieldType.Value);
             _draggedFieldType = null;
         }
-    }
-
-    private void UpdateSelected(Action<Field> mutate)
-    {
-        if (_selectedField is null) return;
-        mutate(_selectedField);
-    }
-
-    private void SetLabel(ChangeEventArgs e)
-    {
-        if (_selectedField is null) return;
-        _selectedField.Label = e.Value?.ToString() ?? "";
-    }
-
-    private void SetGridColumn(ChangeEventArgs e)
-    {
-        if (_selectedField is null) return;
-        _selectedField.GridColumn = ParseIntOr(e.Value, 1);
-    }
-
-    private void SetGridSpan(ChangeEventArgs e)
-    {
-        if (_selectedField is null) return;
-        _selectedField.GridSpan = ParseIntOr(e.Value, 12);
-    }
-
-    private void SetGridRow(ChangeEventArgs e)
-    {
-        if (_selectedField is null) return;
-        _selectedField.GridRow = ParseIntOr(e.Value, 1);
     }
 
     private void UpdateSelectedOptions(string? csv)
@@ -399,10 +499,55 @@ else
     {
         if (_selectedField is null) return;
         foreach (var section in _version.Sections)
-        {
             section.Fields.Remove(_selectedField);
-        }
         _selectedField = null;
+    }
+
+    private void MoveField(Section section, Field field, int direction)
+    {
+        var ordered = section.Fields.OrderBy(f => f.GridRow).ToList();
+        var idx = ordered.IndexOf(field);
+        var swapIdx = idx + direction;
+        if (swapIdx < 0 || swapIdx >= ordered.Count) return;
+
+        var other = ordered[swapIdx];
+        (field.GridRow, other.GridRow) = (other.GridRow, field.GridRow);
+    }
+
+    private void DuplicateField(Section section, Field field)
+    {
+        var maxRow = section.Fields.Count == 0 ? 1 : section.Fields.Max(f => f.GridRow) + 1;
+        var copy = new Field
+        {
+            FieldId    = Guid.NewGuid().ToString(),
+            Type       = field.Type,
+            Label      = field.Label + " (copy)",
+            GridRow    = maxRow,
+            GridColumn = field.GridColumn,
+            GridSpan   = field.GridSpan,
+            Placeholder  = field.Placeholder,
+            DefaultValue = field.DefaultValue,
+            Decimals     = field.Decimals,
+            AllowCustomValue = field.AllowCustomValue,
+            Options    = field.Options?.Select(o => new FieldOption { Value = o.Value, Label = o.Label }).ToList(),
+            Validation = field.Validation is null ? null : new ValidationRule
+            {
+                Required     = field.Validation.Required,
+                MaxLength    = field.Validation.MaxLength,
+                RegexPattern = field.Validation.RegexPattern,
+                Min          = field.Validation.Min,
+                Max          = field.Validation.Max
+            },
+            ConditionalRules = field.ConditionalRules?.Select(r => new ConditionalRule
+            {
+                SourceFieldId = r.SourceFieldId,
+                Operator      = r.Operator,
+                Value         = r.Value,
+                Effect        = r.Effect
+            }).ToList()
+        };
+        section.Fields.Add(copy);
+        _selectedField = copy;
     }
 
     private IEnumerable<Field> AllFieldsExcept(Field exclude) =>
@@ -424,18 +569,11 @@ else
         _showRuleBuilder = false;
     }
 
-    private void RemoveRule(ConditionalRule rule)
-    {
+    private void RemoveRule(ConditionalRule rule) =>
         _selectedField?.ConditionalRules?.Remove(rule);
-    }
 
-    private static int ParseIntOr(object? value, int fallback) =>
-        int.TryParse(value?.ToString(), out var n) ? n : fallback;
-
-    private async Task SaveDraft()
-    {
+    private async Task SaveDraft() =>
         await Repository.SaveVersion(_version);
-    }
 
     private async Task Publish()
     {

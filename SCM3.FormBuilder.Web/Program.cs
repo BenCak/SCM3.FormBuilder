@@ -1,33 +1,42 @@
 using SCM3.FormBuilder.Data;
 using Microsoft.AspNetCore.Hosting;
-using Telerik.Blazor.Services;
+using SCM3.FormBuilder.UI.Designer;
+using SCM3.FormBuilder.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Enable development mode
-builder.Environment.EnvironmentName = Environments.Development;
+// Explicitly set to Development via environment variable
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ServicesStartConcurrently = false;
+});
+
+builder.WebHost.UseStaticWebAssets();
 
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = true;
+    options.DisconnectedCircuitMaxRetained = 100;
+});
 builder.Services.AddTelerikBlazor();
 
-// Local-disk JSON storage. Folder lives next to the running exe -
-// zip up FormBuilderData/ if you want to back it up or hand it off.
+// Local-disk JSON storage
 var dataRoot = Path.Combine(builder.Environment.ContentRootPath, "FormBuilderData");
 builder.Services.AddSingleton<IFormRepository>(new JsonFileFormRepository(dataRoot));
 
 var app = builder.Build();
 
-// Always use static files middleware to serve Blazor framework and other assets
-app.UseStaticFiles();
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
+    app.UseHsts();
 }
 
+app.UseStaticFiles();
 app.UseRouting();
 app.MapBlazorHub();
+app.MapRazorPages();
 app.MapFallbackToPage("/_Host");
 
 app.Run();

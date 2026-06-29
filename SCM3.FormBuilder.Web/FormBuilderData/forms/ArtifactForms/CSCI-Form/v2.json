@@ -1,19 +1,19 @@
 {
-  "FormVersionId": "a1b2c3d4-1111-1111-1111-111111111111",
+  "FormVersionId": "c8a885cd-c9c2-491b-8c9a-87f6e88aaf8f",
   "FormId": "f1111111-1111-1111-1111-111111111111",
   "ToolType": "ArtifactForms",
   "FormKey": "CSCI-Form",
-  "VersionNumber": 1,
+  "VersionNumber": 2,
   "IsPublished": true,
-  "PublishedDate": "2026-06-29T17:06:15.8339168Z",
+  "PublishedDate": "2026-06-29T17:58:37.8116056Z",
   "Sections": [
     {
-      "SectionId": "sec-1",
+      "SectionId": "a5913e8c-cb86-426f-9812-06e2abaa5907",
       "Title": "Custom Fields",
       "Order": 1,
       "Fields": [
         {
-          "FieldId": "custom-text",
+          "FieldId": "9dcee0e8-da9c-430d-8c67-f148bd919a80",
           "Type": "Text",
           "Label": "Custom text",
           "GridRow": 1,
@@ -21,11 +21,17 @@
           "GridSpan": 12,
           "Options": null,
           "AllowCustomValue": false,
-          "Validation": null,
+          "Validation": {
+            "Required": false,
+            "MaxLength": 200,
+            "RegexPattern": null,
+            "Min": null,
+            "Max": null
+          },
           "ConditionalRules": null
         },
         {
-          "FieldId": "custom-number",
+          "FieldId": "2f599ab3-bb87-459d-885f-27c86fd01a0c",
           "Type": "Number",
           "Label": "Custom number",
           "GridRow": 2,
@@ -37,7 +43,7 @@
           "ConditionalRules": null
         },
         {
-          "FieldId": "custom-date",
+          "FieldId": "c4cf5ba0-83c8-408f-9e90-0c6548acf866",
           "Type": "Date",
           "Label": "Custom  date",
           "GridRow": 3,
@@ -49,7 +55,7 @@
           "ConditionalRules": null
         },
         {
-          "FieldId": "custom-dropdown",
+          "FieldId": "3285643d-77a7-431b-b13c-aedf546a661d",
           "Type": "Dropdown",
           "Label": "Custom dropdown",
           "GridRow": 4,
@@ -74,13 +80,42 @@
           "ConditionalRules": null
         },
         {
-          "FieldId": "08a75234-6573-4865-9c23-ef1c323dce21",
+          "FieldId": "e14810da-ff17-4a16-9fd3-e5a215889145",
           "Type": "RichText",
           "Label": "custom multiline",
           "GridRow": 5,
           "GridColumn": 1,
           "GridSpan": 12,
           "Options": null,
+          "AllowCustomValue": false,
+          "Validation": null,
+          "ConditionalRules": null
+        },
+        {
+          "FieldId": "f7609ba9-599b-4aac-9d84-59760da4ebc7",
+          "Type": "MultiSelect",
+          "Label": "custom multiselect",
+          "GridRow": 6,
+          "GridColumn": 1,
+          "GridSpan": 12,
+          "Options": [
+            {
+              "Value": "com1",
+              "Label": "com1"
+            },
+            {
+              "Value": "com2",
+              "Label": "com2"
+            },
+            {
+              "Value": "com3",
+              "Label": "com3"
+            },
+            {
+              "Value": "com4",
+              "Label": "com4"
+            }
+          ],
           "AllowCustomValue": false,
           "Validation": null,
           "ConditionalRules": null

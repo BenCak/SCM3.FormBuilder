@@ -10,15 +10,16 @@
         <h3>Submissions for @FormKey</h3>
         <div class="submissions-controls">
             <label>Search by label:</label>
-            <input type="text" placeholder="Label name..." @bind="_searchLabel" />
-            <input type="text" placeholder="Value..." @bind="_searchValue" />
-            <button class="fb-btn" @onclick="RefreshSubmissions">Search</button>
+            <TelerikTextBox @bind-Value="@_searchLabel" Placeholder="Label name..." Width="180px" />
+            <TelerikTextBox @bind-Value="@_searchValue" Placeholder="Value..." Width="180px" />
+            <TelerikButton ThemeColor="@ThemeConstants.Button.ThemeColor.Primary"
+                           OnClick="@RefreshSubmissions">Search</TelerikButton>
         </div>
     </div>
 
     @if (_loading)
     {
-        <p>Loading submissions...</p>
+        <TelerikLoader Visible="true" Type="@LoaderType.InfiniteSpinner" />
     }
     else if (_submissions == null || _submissions.Count == 0)
     {

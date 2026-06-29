@@ -58,7 +58,10 @@ public class Field
     public int GridSpan { get; set; } = 12;
 
     public List<FieldOption>? Options { get; set; }
-    public bool AllowCustomValue { get; set; } // only meaningful when Type == ComboBox
+    public bool AllowCustomValue { get; set; }
+    public string? Placeholder { get; set; }
+    public string? DefaultValue { get; set; }
+    public int Decimals { get; set; } = 2;
     public ValidationRule? Validation { get; set; }
     public List<ConditionalRule>? ConditionalRules { get; set; }
 }
